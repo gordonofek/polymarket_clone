@@ -1,4 +1,4 @@
-package Internals;
+package internals;
 
 public interface Event {
 }
