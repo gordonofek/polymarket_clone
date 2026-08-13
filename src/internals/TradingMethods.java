@@ -12,7 +12,7 @@ public interface TradingMethods {
     // execute a trade order of the user on the event
     TradeResult executeOrder(TradeRequest request);
 
-    // calc the commission participantes owe the Market Maker
+    // calc the commission participants owe the Market Maker
     double calculateCommission(double baseAmount, String currentPhase);
 
     // activates the event and deducts the initial subsidy from the event's internal MM account
