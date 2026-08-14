@@ -23,9 +23,6 @@ public interface Event {
     // gets the current price for specific option
     double getOptionPrice(String optionName);
 
-    // gets the total amount invested in the event
-    double getPoolValue();
-
     // gets the history of all trades in the event
     List<TradeResult> getTradeHistory();
 
