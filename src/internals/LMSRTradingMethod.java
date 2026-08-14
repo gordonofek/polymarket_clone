@@ -9,11 +9,11 @@ public class LMSRTradingMethod implements TradingMethods {
     // ahead of part 3 and making LMSR support multi choice bets
     private Map<String, Integer> optionShares;
     private int commissionPercent;
-    private String commissionType;
+    private CommissionType commissionType;
     private List<TradeResult> tradeHistory;
 
 
-    public LMSRTradingMethod(int liquidity, Map<String, Integer> initialOptions, int commissionPercent, String commissionType) {
+    public LMSRTradingMethod(int liquidity, Map<String, Integer> initialOptions, int commissionPercent, CommissionType commissionType) {
         this.liquidity = liquidity;
         this.optionShares = initialOptions;
         this.commissionPercent = commissionPercent;
@@ -100,7 +100,7 @@ public class LMSRTradingMethod implements TradingMethods {
 
     @Override
     public double calculateCommission(double baseAmount, String currentPhase) {
-        // בודקים האם שלב הגבייה הנוכחי תואם לשיטת העמלה שהוגדרה ב-XML לאירוע הזה
+        // בודקים האם שלבה הגבייה הנוכחי תואם לשיטת העמלה שהוגדר ב-XML לאירוע הזה
         if (this.commissionType.equals(currentPhase)) {
             return baseAmount * (this.commissionPercent / 100.0);
         }
