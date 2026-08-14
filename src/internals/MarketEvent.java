@@ -2,7 +2,11 @@ package internals;
 
 import java.util.List;
 
-public class LMSREvent implements Event {
+
+/**
+ *  A general implementation of an Event in the guess market.
+ */
+public class MarketEvent implements Event{
 
     private int id;
     private String name;
@@ -10,11 +14,10 @@ public class LMSREvent implements Event {
     private int commissionPercent;
     private CommissionType commissionType;
     private List<String> options;
-
-    private EventStatus status;
     private TradingMethods tradingMethod;
+    private EventStatus status;
 
-    public LMSREvent(int id, String name, String description, int commissionPercent, CommissionType commissionType, List<String> options, TradingMethods tradingMethod)
+    public MarketEvent(int id, String name, String description, int commissionPercent, CommissionType commissionType, List<String> options, TradingMethods tradingMethod)
     {
         this.id = id;
         this.name = name;
@@ -22,8 +25,8 @@ public class LMSREvent implements Event {
         this.commissionPercent = commissionPercent;
         this.commissionType = commissionType;
         this.options = options;
-        this.status = EventStatus.NOT_STARTED;
         this.tradingMethod = tradingMethod;
+        this.status = EventStatus.NOT_STARTED;
     }
 
     @Override
@@ -62,6 +65,24 @@ public class LMSREvent implements Event {
     }
 
     @Override
+    public double getOptionPrice(String optionName)
+    {
+        return this.tradingMethod.getPrice(optionName);
+    }
+
+    @Override
+    public double getPoolValue()
+    {
+        return this.tradingMethod.getPoolValue();
+    }
+
+    @Override
+    public List<TradeResult> getTradeHistory()
+    {
+        return this.tradingMethod.getTradeHistory();
+    }
+
+    @Override
     public void openEvent() {
         if(this.status != EventStatus.NOT_STARTED)
         {
@@ -86,5 +107,6 @@ public class LMSREvent implements Event {
         this.status = EventStatus.CLOSED;
         return this.tradingMethod.closeMarket(winningOption);
     }
-
 }
+
+
