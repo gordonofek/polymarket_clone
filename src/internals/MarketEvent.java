@@ -16,6 +16,7 @@ public class MarketEvent implements Event{
     private List<String> options;
     private TradingMethods tradingMethod;
     private EventStatus status;
+    private String winningOption;
 
     public MarketEvent(int id, String name, String description, int commissionPercent, CommissionType commissionType, List<String> options, TradingMethods tradingMethod)
     {
@@ -27,6 +28,7 @@ public class MarketEvent implements Event{
         this.options = options;
         this.tradingMethod = tradingMethod;
         this.status = EventStatus.NOT_STARTED;
+        this.winningOption = null;
     }
 
     @Override
@@ -99,12 +101,17 @@ public class MarketEvent implements Event{
         return this.tradingMethod.executeOrder(request);
     }
 
+    public String getWinningOption() {
+        return winningOption;
+    }
+
     @Override
     public CloseMarketResult resolveEvent(String winningOption){
         if (this.status != EventStatus.OPEN) {
             throw new IllegalStateException("Only open events can be resolved");
         }
         this.status = EventStatus.CLOSED;
+        this.winningOption = winningOption;
         return this.tradingMethod.closeMarket(winningOption);
     }
 }

@@ -2,6 +2,7 @@ package internals;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class EventManger {
@@ -19,6 +20,20 @@ public class EventManger {
             throw new IllegalArgumentException("Event with the id"+event.getId()+" already exists in the registry");
         }
         this.eventRegistry.put(event.getId(),event);
+    }
+
+    // adds a list of events to registry
+    public void addEventList(List<Event> list)
+    {
+        for(Event event : list){
+            addEvent(event);
+        }
+    }
+
+    // check if the Registry is Empty return true if it is else return false
+    public boolean isRegistryEmpty()
+    {
+        return eventRegistry.isEmpty();
     }
 
     // gets the event by id
