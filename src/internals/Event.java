@@ -20,6 +20,15 @@ public interface Event {
     // return the status of the event (Not-Started, Open, Closed)
     EventStatus getStatus();
 
+    // gets the current price for specific option
+    double getOptionPrice(String optionName);
+
+    // gets the total amount invested in the event
+    double getPoolValue();
+
+    // gets the history of all trades in the event
+    List<TradeResult> getTradeHistory();
+
     /** opens the event, transitions the event from Not-Started to Open
         for LMSR: The Market Maker pays the initial subsidy
         for Order Book: The Market Maker buys the initial shares
