@@ -38,4 +38,5 @@ public interface Event {
     // transitions the event from Open to Closed. Calculates the payouts.
     CloseMarketResult resolveEvent(String winningOption);
 
+    String getWinningOption();
 }
