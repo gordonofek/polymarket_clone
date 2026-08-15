@@ -23,6 +23,13 @@ public interface Event {
     // gets the current price for specific option
     double getOptionPrice(String optionName);
 
+    /**
+     * returns the current value of the event's pool.
+     * For LMSR represents the total cost function state.
+     * For OrderBook represents the balance of the internal event account
+     */
+    double getPoolValue();
+
     // gets the history of all trades in the event
     List<TradeResult> getTradeHistory();
 

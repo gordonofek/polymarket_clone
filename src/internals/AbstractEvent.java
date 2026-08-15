@@ -14,6 +14,7 @@ public abstract class AbstractEvent implements Event{
     protected int commissionPercent;
     protected CommissionType commissionType;
     protected List<String> options;
+    protected String winningOption;
     protected EventStatus status;
     protected TradingMethods tradingMethod;
 
@@ -38,6 +39,7 @@ public abstract class AbstractEvent implements Event{
         this.options = options;
         this.tradingMethod = tradingMethod;
         this.status = EventStatus.NOT_STARTED;
+        this.winningOption = null;
     }
 
     @Override
@@ -60,6 +62,12 @@ public abstract class AbstractEvent implements Event{
 
     @Override
     public EventStatus getStatus() { return this.status; }
+
+    @Override
+    public String getWinningOption() { return this.winningOption; }
+
+    @Override
+    public double getPoolValue() { return this.tradingMethod.getPoolValue(); }
 
     /**
      *  validates the event state before passing the trade to the responsible tradingMethod
@@ -89,7 +97,7 @@ public abstract class AbstractEvent implements Event{
         return this.tradingMethod.getTradeHistory();
     }
 
-    private void validateOption(String optionName)
+    protected void validateOption(String optionName)
     {
         if(!this.options.contains(optionName))
         {
