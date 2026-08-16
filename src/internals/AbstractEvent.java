@@ -69,6 +69,9 @@ public abstract class AbstractEvent implements Event{
     @Override
     public double getPoolValue() { return this.tradingMethod.getPoolValue(); }
 
+    @Override
+    public int getOptionShares(String optionName) { return this.tradingMethod.getOptionShares(optionName); }
+
     /**
      *  validates the event state before passing the trade to the responsible tradingMethod
      */

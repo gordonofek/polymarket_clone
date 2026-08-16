@@ -41,7 +41,10 @@ public class Engine implements EngineInterface {
                         event.getId(),
                         event.getName(),
                         event.getDescription(),
-                        event.getStatus().name() // Converts the EventStatus enum to a String
+                        event.getStatus().name(), // Converts the EventStatus enum to a String
+                        event.getCommissionPercent(),
+                        event.getCommissionType().name(),
+                        event.getOptions()
                 ))
                 .toList();
     }
@@ -59,7 +62,10 @@ public class Engine implements EngineInterface {
                         event.getId(),
                         event.getName(),
                         event.getDescription(),
-                        event.getStatus().name()
+                        event.getStatus().name(), // Converts the EventStatus enum to a String
+                        event.getCommissionPercent(),
+                        event.getCommissionType().name(),
+                        event.getOptions()
                 );
                 list.add(dto);
             }
@@ -82,7 +88,8 @@ public class Engine implements EngineInterface {
         List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
                 .map(optionName -> new OptionDetailsDTO(
                         optionName,
-                        event.getOptionPrice(optionName)
+                        event.getOptionPrice(optionName),
+                        event.getOptionShares(optionName)
                 ))
                 .toList();
 

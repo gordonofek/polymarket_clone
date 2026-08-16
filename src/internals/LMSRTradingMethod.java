@@ -108,6 +108,12 @@ public class LMSRTradingMethod implements TradingMethods {
     }
 
     @Override
+    public int getOptionShares(String optionName)
+    {
+        return this.optionShares.getOrDefault(optionName, 0);
+    }
+
+    @Override
     public double openMarket() {
         return getPoolValue();
     }

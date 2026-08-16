@@ -30,6 +30,8 @@ public interface Event {
      */
     double getPoolValue();
 
+    int getOptionShares(String optionName);
+
     // gets the history of all trades in the event
     List<TradeResult> getTradeHistory();
 
