@@ -51,7 +51,7 @@ public class ConsoleUI {
         {
             System.out.println((i+1) + "). " + MENU_OPTIONS.get(i));
         }
-        System.out.println("Please enter your choice by typing a number (1-" + MENU_OPTIONS.size() + "): ");
+        System.out.print("Please enter your choice by typing a number (1-" + MENU_OPTIONS.size() + "): ");
     }
 
     private int getUserInput() {
@@ -97,7 +97,8 @@ public class ConsoleUI {
         }
         catch (Exception e)
         {
-            System.out.println("Failed to load the file");
+            System.out.println("Failed to load the file: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

@@ -23,6 +23,11 @@ public class Engine implements EngineInterface {
         XMLDataLoader loader = new XMLDataLoader();
         List<Event> loadedEvents = loader.loadEventsFromXML(filePath);
 
+        // auto opens all the events.
+        for (Event event : loadedEvents) {
+            event.openEvent();
+        }
+
         manager.clearEvents();
         manager.addEventList(loadedEvents);
     }
