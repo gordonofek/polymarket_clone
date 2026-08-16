@@ -2,6 +2,7 @@ package engine;
 
 import engine.dto.*;
 import internals.ActionType;
+import internals.EventManager;
 
 import java.util.List;
 
@@ -55,4 +56,10 @@ public interface EngineInterface {
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).
      */
     CloseEventReceiptDTO closeEvent(int eventId, String winningOption);
+
+    // saves the current state of the program to bin file
+    void saveState(String filePath);
+
+    // loads program state from a bin file
+    void loadState(String filePath);
 }

@@ -1,7 +1,8 @@
 package internals;
+import java.io.Serializable;
 import java.util.*;
 
-public class LMSRTradingMethod implements TradingMethods {
+public class LMSRTradingMethod implements TradingMethods, Serializable {
 
     // the b var from the equations
     private int liquidity;

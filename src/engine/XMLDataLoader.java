@@ -36,6 +36,8 @@ public static List<Event> loadEventsFromXML(String filePath) throws Exception {
         JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
         Unmarshaller unmarshaller = context.createUnmarshaller();
 
+        // maxim wrote this
+
         // Create a custom XML reader that ignores missing namespace definitions
         SAXParserFactory spf = SAXParserFactory.newInstance();
         spf.setNamespaceAware(false); // This is the magic line that saves the day!
@@ -45,6 +47,8 @@ public static List<Event> loadEventsFromXML(String filePath) throws Exception {
 
         // Unmarshal using our forgiving parser instead of the strict default one
         GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(source);
+
+        //
 
         // 2. וולידציה והמרה לאובייקטי מנוע
         List<Event> engineEvents = new ArrayList<>();

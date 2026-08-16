@@ -1,20 +1,19 @@
 package engine;
 
 import engine.dto.*;
+import engine.files.FileHandler;
 import internals.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Engine implements EngineInterface {
 
     // כאן המנוע שומר את כל האירועים הפעילים והסגורים (למשל במפה לפי ID)
-    private EventManger manager;
+    private EventManager manager;
 
     public Engine() {
-        this.manager = new EventManger();
+        this.manager = new EventManager();
     }
 
     @Override
@@ -161,5 +160,17 @@ public class Engine implements EngineInterface {
                     0
             );
         }
+    }
+
+    @Override
+    public void loadState(String filePath) {
+        // דורסים את המנהל הישן בזה שנטען מהקובץ
+        this.manager = FileHandler.loadState(filePath);
+    }
+
+    @Override
+    public void saveState(String filePath) {
+        // המנוע פשוט מעביר את ה-manager שלו ל-FileHandler
+        FileHandler.saveState(this.manager, filePath);
     }
 }

@@ -6,6 +6,9 @@ import engine.dto.EventDetailsDTO;
 import engine.dto.EventSummaryDTO;
 import engine.dto.TradeReceiptDTO;
 import internals.ActionType;
+// ייתכן שתצטרך להוסיף כאן ייבוא (import) ל-Exceptions שיצרת, למשל:
+// import engine.files.StateSaveException;
+// import engine.files.StateLoadException;
 
 import java.util.List;
 import java.util.Scanner;
@@ -22,6 +25,8 @@ public class ConsoleUI {
             "Event Trading Status",
             "Participate in Event",
             "Close Event",
+            "Save System State",
+            "Load System State",
             "Exit"
     );
 
@@ -76,7 +81,9 @@ public class ConsoleUI {
             case 3 -> handleEventStatus();
             case 4 -> handleParticipate();
             case 5 -> handleCloseEvent();
-            case 6 -> this.isRunning = false;
+            case 6 -> handleSaveState();
+            case 7 -> handleLoadState();
+            case 8 -> this.isRunning = false;
             default -> System.out.println("Invalid input, please enter a number between 1 and "+MENU_OPTIONS.size());
         }
     }
@@ -263,4 +270,29 @@ public class ConsoleUI {
         //TODO
     }
 
+    private void handleSaveState() {
+        System.out.println("Enter the full path to save the system state (without file extension): ");
+        String path = scanner.nextLine().trim();
+        String fullPath = path + ".dat";
+
+        try {
+            engine.saveState(fullPath);
+            System.out.println("System state successfully saved to: " + fullPath);
+        } catch (Exception e) { // תופס את StateSaveException או שגיאות כלליות
+            System.out.println("Failed to save state: " + e.getMessage());
+        }
+    }
+
+    private void handleLoadState() {
+        System.out.println("Enter the full path to load the system state from (without file extension): ");
+        String path = scanner.nextLine().trim();
+        String fullPath = path + ".dat";
+
+        try {
+            engine.loadState(fullPath);
+            System.out.println("System state successfully loaded from: " + fullPath);
+        } catch (Exception e) { // תופס את StateLoadException או שגיאות כלליות
+            System.out.println("Failed to load state: " + e.getMessage());
+        }
+    }
 }
