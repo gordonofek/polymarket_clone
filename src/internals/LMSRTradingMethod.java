@@ -1,7 +1,8 @@
 package internals;
+import java.io.Serializable;
 import java.util.*;
 
-public class LMSRTradingMethod implements TradingMethods {
+public class LMSRTradingMethod implements TradingMethods, Serializable {
 
     // the b var from the equations
     private int liquidity;
@@ -105,6 +106,12 @@ public class LMSRTradingMethod implements TradingMethods {
             return baseAmount * (this.commissionPercent / 100.0);
         }
         return 0.0; // אם אנחנו בשלב רכישה אבל העמלה היא on-close, נחזיר 0
+    }
+
+    @Override
+    public int getOptionShares(String optionName)
+    {
+        return this.optionShares.getOrDefault(optionName, 0);
     }
 
     @Override

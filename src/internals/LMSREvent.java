@@ -1,12 +1,13 @@
 package internals;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
  *  A Logarithmic Market Scoring Rule (LMSR) Event type
  *  This event uses an automated market maker pool to calculate prices dynamically
  */
-public class LMSREvent extends AbstractEvent{
+public class LMSREvent extends AbstractEvent {
 
     public LMSREvent(int id, String name, String description, int commissionPercent, CommissionType commissionType, List<String> options, TradingMethods tradingMethod)
     {

@@ -1,20 +1,19 @@
 package engine;
 
 import engine.dto.*;
+import engine.files.FileHandler;
 import internals.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class Engine implements EngineInterface {
 
     // כאן המנוע שומר את כל האירועים הפעילים והסגורים (למשל במפה לפי ID)
-    private EventManger manager;
+    private EventManager manager;
 
     public Engine() {
-        this.manager = new EventManger();
+        this.manager = new EventManager();
     }
 
     @Override
@@ -22,6 +21,11 @@ public class Engine implements EngineInterface {
         // creates a new XML_loader obj, and then load XML from filePath
         XMLDataLoader loader = new XMLDataLoader();
         List<Event> loadedEvents = loader.loadEventsFromXML(filePath);
+
+        // auto opens all the events.
+        for (Event event : loadedEvents) {
+            event.openEvent();
+        }
 
         manager.clearEvents();
         manager.addEventList(loadedEvents);
@@ -41,7 +45,10 @@ public class Engine implements EngineInterface {
                         event.getId(),
                         event.getName(),
                         event.getDescription(),
-                        event.getStatus().name() // Converts the EventStatus enum to a String
+                        event.getStatus().name(), // Converts the EventStatus enum to a String
+                        event.getCommissionPercent(),
+                        event.getCommissionType().name(),
+                        event.getOptions()
                 ))
                 .toList();
     }
@@ -59,7 +66,10 @@ public class Engine implements EngineInterface {
                         event.getId(),
                         event.getName(),
                         event.getDescription(),
-                        event.getStatus().name()
+                        event.getStatus().name(), // Converts the EventStatus enum to a String
+                        event.getCommissionPercent(),
+                        event.getCommissionType().name(),
+                        event.getOptions()
                 );
                 list.add(dto);
             }
@@ -82,7 +92,8 @@ public class Engine implements EngineInterface {
         List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
                 .map(optionName -> new OptionDetailsDTO(
                         optionName,
-                        event.getOptionPrice(optionName)
+                        event.getOptionPrice(optionName),
+                        event.getOptionShares(optionName)
                 ))
                 .toList();
 
@@ -149,5 +160,17 @@ public class Engine implements EngineInterface {
                     0
             );
         }
+    }
+
+    @Override
+    public void loadState(String filePath) {
+        // דורסים את המנהל הישן בזה שנטען מהקובץ
+        this.manager = FileHandler.loadState(filePath);
+    }
+
+    @Override
+    public void saveState(String filePath) {
+        // המנוע פשוט מעביר את ה-manager שלו ל-FileHandler
+        FileHandler.saveState(this.manager, filePath);
     }
 }

@@ -1,5 +1,6 @@
 package internals;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -7,7 +8,7 @@ import java.util.Objects;
 /**
  *  a base implementation of the Event interface.
  */
-public abstract class AbstractEvent implements Event{
+public abstract class AbstractEvent implements Event, Serializable {
     protected int id;
     protected String name;
     protected String description;
@@ -68,6 +69,9 @@ public abstract class AbstractEvent implements Event{
 
     @Override
     public double getPoolValue() { return this.tradingMethod.getPoolValue(); }
+
+    @Override
+    public int getOptionShares(String optionName) { return this.tradingMethod.getOptionShares(optionName); }
 
     /**
      *  validates the event state before passing the trade to the responsible tradingMethod

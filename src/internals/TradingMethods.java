@@ -15,6 +15,9 @@ public interface TradingMethods {
     // calc the commission participants owe the Market Maker
     double calculateCommission(double baseAmount, String currentPhase);
 
+    // gets the total amount of shares bought for a specific option
+    int getOptionShares(String optionName);
+
     // activates the event and deducts the initial subsidy from the event's internal MM account
     double openMarket();
 

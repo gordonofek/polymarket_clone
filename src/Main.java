@@ -1,5 +1,8 @@
+import ui.ConsoleUI;
+
 public class Main {
-    void main() {
-        IO.println("Hello, World!");
+    public static void main(String[] args) {
+        ConsoleUI ui = new ConsoleUI();
+        ui.start();
     }
 }

@@ -4,26 +4,51 @@ import engine.xml.GMEvent;
 import engine.xml.GuessMarket;
 import internals.CommissionType;
 import internals.Event;
+import internals.LMSREvent;
 import internals.LMSRTradingMethod;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
+
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.transform.sax.SAXSource;
+import org.xml.sax.InputSource;
+import org.xml.sax.XMLReader;
+import java.io.FileReader;
 
 import java.io.File;
 import java.util.*;
 
 public class XMLDataLoader {
 
-    public static List<Event> loadEventsFromXML(String filePath) throws JAXBException, InvalidXMLException {
+//    public static List<Event> loadEventsFromXML(String filePath) throws JAXBException, InvalidXMLException {
+public static List<Event> loadEventsFromXML(String filePath) throws Exception {
         // 1. Unmarshalling: המרת ה-XML לאובייקטים בעזרת JAXB
         File file = new File(filePath);
         if (!file.exists() || !file.getName().endsWith(".xml")) {
             throw new InvalidXMLException("The file does not exist or is not an XML file.");
         }
 
+//        JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
+//        Unmarshaller unmarshaller = context.createUnmarshaller();
+//        GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(file);
+
         JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
         Unmarshaller unmarshaller = context.createUnmarshaller();
-        GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(file);
+
+        // maxim wrote this
+
+        // Create a custom XML reader that ignores missing namespace definitions
+        SAXParserFactory spf = SAXParserFactory.newInstance();
+        spf.setNamespaceAware(false); // This is the magic line that saves the day!
+
+        XMLReader xmlReader = spf.newSAXParser().getXMLReader();
+        SAXSource source = new SAXSource(xmlReader, new InputSource(new FileReader(file)));
+
+        // Unmarshal using our forgiving parser instead of the strict default one
+        GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(source);
+
+        //
 
         // 2. וולידציה והמרה לאובייקטי מנוע
         List<Event> engineEvents = new ArrayList<>();
@@ -76,16 +101,19 @@ public class XMLDataLoader {
 
             // we need to create engine class based on the interface and then activate its constructor.
             // ג. יצירת האירוע האמיתי של המנוע
-            /*Event newEvent = new Event(
+            List<String> optionsList = xmlEvent.getGMOptions().getGMOption();
+
+            Event newEvent = new LMSREvent(
                     xmlEvent.getId(),
                     fullEventName,
                     xmlEvent.getDescription(),
                     commission,
-                    xmlEvent.getComision().getType(),
+                    commissionType,
+                    optionsList,
                     lmsrMethod
             );
 
-            engineEvents.add(newEvent);*/
+            engineEvents.add(newEvent);
         }
         return engineEvents;
     }

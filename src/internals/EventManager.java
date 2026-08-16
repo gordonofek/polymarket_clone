@@ -1,14 +1,15 @@
 package internals;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class EventManger {
+public class EventManager implements Serializable {
     private Map<Integer, Event> eventRegistry;
 
-    public EventManger()
+    public EventManager()
     {
         this.eventRegistry = new HashMap<>();
     }
