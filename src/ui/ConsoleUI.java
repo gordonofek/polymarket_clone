@@ -88,6 +88,42 @@ public class ConsoleUI {
         }
     }
 
+    /**
+     *  ################ INPUT HELPERS ################
+     */
+
+    private int readIntInRange(String prompt, int min, int max) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            try {
+                int value = Integer.parseInt(input);
+                if (value >= min && value <= max) {
+                    return value;
+                }
+                System.out.printf("Invalid input. Please enter a number between %d and %d.%n", min, max);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+            }
+        }
+    }
+
+    private int readPositiveInt(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            try {
+                int value = Integer.parseInt(input);
+                if (value > 0) {
+                    return value;
+                }
+                System.out.println("Amount must be greater than 0.");
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+            }
+        }
+    }
+
 
 
     /**
@@ -95,7 +131,7 @@ public class ConsoleUI {
      */
 
     private void handleLoadData() {
-        System.out.println("Enter full path for the xml file: ");
+        System.out.print("Enter full path for the xml file: ");
         String filePath = scanner.nextLine().trim();
 
         try {
@@ -129,7 +165,6 @@ public class ConsoleUI {
                     String.join(", ", event.options()),
                     event.status());
         }
-        System.out.println();
     }
 
     private void handleEventStatus() {
@@ -139,21 +174,19 @@ public class ConsoleUI {
             return;
         }
         handleDisplayEvents();
-        System.out.print("Enter the number (not the id) of the event from the list above (1-" + allEvents.size() + "): ");
-        String choice = scanner.nextLine().trim();
+        int index = readIntInRange(
+                "Enter the number (not the id) of the event from the list above (1-" + allEvents.size() + "):",
+                1, allEvents.size());
+        int eventId = allEvents.get(index - 1).id();
 
         try {
-            int index = Integer.parseInt(choice);
-            if (index < 1 || index > allEvents.size()) {
-                System.out.println("Invalid input, enter the number (not the id) of the event from the list (1-" + allEvents.size() + "): ");
-                return;
-            }
-            int eventId = allEvents.get(index - 1).id();
             EventDetailsDTO details = engine.getEventState(eventId);
+
             System.out.println("\n##### Event Details: " + details.name() + " #####");
             System.out.println("Status: " + details.status());
             System.out.printf("Event Pool Value: %.2f%n", details.poolValue());
             System.out.printf("Total Commission Collected: %.2f%n", details.totalCommission());
+
             System.out.println("\nOptions Current State:");
             for (int i=0;i<details.options().size(); i++)
             {
@@ -168,7 +201,6 @@ public class ConsoleUI {
             else {
                 for (int i = details.tradeHistory().size() - 1; i >= 0; i--) {
                     var trade = details.tradeHistory().get(i);
-                    // Fixed method name:
                     System.out.printf("  - Bought %d shares of %s | Total Paid: %.2f%n",
                             trade.amount(), trade.optionName(), trade.pricePaid());
                 }
@@ -199,19 +231,15 @@ public class ConsoleUI {
             EventSummaryDTO event = activeEvents.get(i);
             System.out.printf("%d) Id: %d | Name: %s%n", i + 1, event.id(), event.name());
         }
+        // select event
+        int index = readIntInRange(
+                "Enter the number of the event to purchase (1-" + activeEvents.size() + "): ",
+                1, activeEvents.size());
+        int eventId = activeEvents.get(index - 1).id();
         try {
-            // select event
-            System.out.print("\nEnter the number of the event to purchase (1-"+activeEvents.size()+"): ");
-            int index = Integer.parseInt(scanner.nextLine().trim());
-            if (index < 1 || index > activeEvents.size()) {
-                System.out.println("Invalid input. Please enter a valid number.");
-                return;
-            }
-            int eventId = activeEvents.get(index - 1).id();
-
             // show current state of the chosen event
             EventDetailsDTO details = engine.getEventState(eventId);
-            System.out.println("\n--- Current State of: " + details.name() + " ---");
+            System.out.println("\n### Current State of: " + details.name() + " ###");
             for (int i = 0; i < details.options().size(); i++) {
                 var opt = details.options().get(i);
                 System.out.printf("  %d) %s - Current Value: %.2f | Shares Bought: %d%n",
@@ -219,21 +247,13 @@ public class ConsoleUI {
             }
 
             // select option
-            System.out.print("Enter the number of the option that you would like to back (1-"+details.options().size()+"):");
-            int optionIndex = Integer.parseInt(scanner.nextLine().trim());
-            if(optionIndex < 1 || optionIndex > details.options().size()) {
-                System.out.println("Invalid input. Please enter a valid number.");
-                return;
-            }
+            int optionIndex = readIntInRange(
+                    "Enter the number of the option that you would like to back (1-" + details.options().size() + "): ",
+                    1, details.options().size());
             String chosenOption = details.options().get(optionIndex - 1).optionName();
 
             // select amount
-            System.out.print("Enter the amount of shares you want to buy: ");
-            int amount = Integer.parseInt(scanner.nextLine().trim());
-            if (amount <= 0) {
-                System.out.println("Amount must be greater than 0.");
-                return;
-            }
+            int amount = readPositiveInt("Enter the amount of shares you want to buy: ");
 
             // execute trade
             TradeReceiptDTO receipt = engine.placeOrder(eventId, chosenOption, amount, ActionType.BUY, 0.0);
@@ -242,12 +262,12 @@ public class ConsoleUI {
                 System.out.println("\n*** Trade Successful! ***");
                 double sharesCost = receipt.totalCost() - receipt.commission();
                 System.out.printf("Total Paid: %.2f%n", receipt.totalCost());
-                System.out.printf("  - Shares Cost: %.2f%n", sharesCost);
-                System.out.printf("  - Commission: %.2f%n", receipt.commission());
+                System.out.printf("  -> Shares Cost: %.2f%n", sharesCost);
+                System.out.printf("  -> Commission: %.2f%n", receipt.commission());
 
                 // fetch the updated state to show the user the updated market
                 EventDetailsDTO updatedDetails = engine.getEventState(eventId);
-                System.out.println("\n--- Updated Event State ---");
+                System.out.println("\n### Updated Event State ###");
                 System.out.printf("Event Pool Value: %.2f%n", updatedDetails.poolValue());
                 for (int i = 0; i < updatedDetails.options().size(); i++) {
                     var opt = updatedDetails.options().get(i);

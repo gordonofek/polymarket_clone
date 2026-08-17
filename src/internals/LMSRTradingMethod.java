@@ -86,7 +86,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double rawCost = poolAfter - poolBefore;
 
         // 4. חישוב העמלה (רק אם השיטה היא on-purchase)
-        double commission = calculateCommission(rawCost, "on-purchase");
+        double commission = calculateCommission(rawCost, "ON_PURCHASE");
 
         double finalCost = rawCost + commission;
 
@@ -102,7 +102,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     @Override
     public double calculateCommission(double baseAmount, String currentPhase) {
         // בודקים האם שלבה הגבייה הנוכחי תואם לשיטת העמלה שהוגדר ב-XML לאירוע הזה
-        if (this.commissionType.equals(currentPhase)) {
+        if (this.commissionType.name().equals(currentPhase)) {
             return baseAmount * (this.commissionPercent / 100.0);
         }
         return 0.0; // אם אנחנו בשלב רכישה אבל העמלה היא on-close, נחזיר 0
