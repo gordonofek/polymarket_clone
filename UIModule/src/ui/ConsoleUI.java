@@ -173,7 +173,7 @@ public class ConsoleUI {
      */
 
     private void handleLoadData() {
-        System.out.print("Enter full path for the xml file: ");
+        System.out.print("Enter full path for the xml file (with file extension): ");
         String filePath = scanner.nextLine().trim();
 
         try {
