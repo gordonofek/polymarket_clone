@@ -2,6 +2,7 @@ package ui;
 
 import engine.Engine;
 import engine.EngineInterface;
+import engine.dto.CloseEventReceiptDTO;
 import engine.dto.EventDetailsDTO;
 import engine.dto.EventSummaryDTO;
 import engine.dto.TradeReceiptDTO;
@@ -125,6 +126,47 @@ public class ConsoleUI {
     }
 
 
+    /**
+     * Helper method to print summary or full details of an event according to commands 2/3.
+     */
+
+    private void printEventStateDetails(EventDetailsDTO details) {
+        System.out.printf("Event Pool Value: %.2f%n", details.poolValue());
+        System.out.printf("Total Commission Collected: %.2f%n", details.totalCommission());
+
+        System.out.println("\nOptions Current State:");
+        for (int i=0;i<details.options().size(); i++) {
+            var option = details.options().get(i);
+            System.out.printf("  %d) %s - Current Value: %.2f | Shares Bought: %d%n",
+                    (i + 1), option.optionName(), option.currentPrice(), option.sharesBought());
+        }
+
+        System.out.println("\nTrade History:");
+        if (details.tradeHistory().isEmpty()) {
+            System.out.println("  No trades have occurred yet.");
+        } else {
+            for (int i = details.tradeHistory().size() - 1; i >= 0; i--) {
+                var trade = details.tradeHistory().get(i);
+                System.out.printf("  - Bought %d shares of %s | Total Paid: %.2f%n",
+                        trade.amount(), trade.optionName(), trade.pricePaid());
+            }
+        }
+    }
+
+    private void printEventSummaryDetails(int index, EventSummaryDTO event)
+    {
+        System.out.printf("%d) Id: %d | Name: %s%n   Description: %s%n   Commission: %d%% (%s)%n   Options: %s%n   Status: %s%n%n",
+                index,
+                event.id(),
+                event.name(),
+                event.description(),
+                event.commission(),
+                event.commissionType(),
+                String.join(", ", event.options()),
+                event.status());
+    }
+
+
 
     /**
      *  ################ HANDLERS ################
@@ -141,7 +183,6 @@ public class ConsoleUI {
         catch (Exception e)
         {
             System.out.println("Failed to load the file: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -154,16 +195,7 @@ public class ConsoleUI {
         System.out.println();
         for (int i=0;i<allEvents.size(); i++)
         {
-            EventSummaryDTO event = allEvents.get(i);
-            System.out.printf("%d) Id: %d | Name: %s%n   Description: %s%n   Commission: %d%% (%s)%n   Options: %s%n   Status: %s%n%n",
-                    i+1,
-                    event.id(),
-                    event.name(),
-                    event.description(),
-                    event.commission(),
-                    event.commissionType(),
-                    String.join(", ", event.options()),
-                    event.status());
+            printEventSummaryDetails(i+1, allEvents.get(i));
         }
     }
 
@@ -184,27 +216,8 @@ public class ConsoleUI {
 
             System.out.println("\n##### Event Details: " + details.name() + " #####");
             System.out.println("Status: " + details.status());
-            System.out.printf("Event Pool Value: %.2f%n", details.poolValue());
-            System.out.printf("Total Commission Collected: %.2f%n", details.totalCommission());
 
-            System.out.println("\nOptions Current State:");
-            for (int i=0;i<details.options().size(); i++)
-            {
-                var option = details.options().get(i);
-                System.out.printf("  %d) %s - Current Value: %.2f%n", (i + 1), option.optionName(), option.currentPrice());
-            }
-
-            System.out.println("\nTrade History:");
-            if (details.tradeHistory().isEmpty()) {
-                System.out.println("  No trades have occurred yet.");
-            }
-            else {
-                for (int i = details.tradeHistory().size() - 1; i >= 0; i--) {
-                    var trade = details.tradeHistory().get(i);
-                    System.out.printf("  - Bought %d shares of %s | Total Paid: %.2f%n",
-                            trade.amount(), trade.optionName(), trade.pricePaid());
-                }
-            }
+            printEventStateDetails(details);
 
             if ("CLOSED".equals(details.status())) {
                 System.out.println("\n*** Event is CLOSED ***");
@@ -228,8 +241,7 @@ public class ConsoleUI {
         }
         System.out.println("###### Active Events ######");
         for (int i=0;i<activeEvents.size();i++) {
-            EventSummaryDTO event = activeEvents.get(i);
-            System.out.printf("%d) Id: %d | Name: %s%n", i + 1, event.id(), event.name());
+            printEventSummaryDetails(i+1, activeEvents.get(i));
         }
         // select event
         int index = readIntInRange(
@@ -240,11 +252,7 @@ public class ConsoleUI {
             // show current state of the chosen event
             EventDetailsDTO details = engine.getEventState(eventId);
             System.out.println("\n### Current State of: " + details.name() + " ###");
-            for (int i = 0; i < details.options().size(); i++) {
-                var opt = details.options().get(i);
-                System.out.printf("  %d) %s - Current Value: %.2f | Shares Bought: %d%n",
-                        (i + 1), opt.optionName(), opt.currentPrice(), opt.sharesBought());
-            }
+            printEventStateDetails(details);
 
             // select option
             int optionIndex = readIntInRange(
@@ -268,12 +276,8 @@ public class ConsoleUI {
                 // fetch the updated state to show the user the updated market
                 EventDetailsDTO updatedDetails = engine.getEventState(eventId);
                 System.out.println("\n### Updated Event State ###");
-                System.out.printf("Event Pool Value: %.2f%n", updatedDetails.poolValue());
-                for (int i = 0; i < updatedDetails.options().size(); i++) {
-                    var opt = updatedDetails.options().get(i);
-                    System.out.printf("  %s - New Value: %.2f | Total Shares: %d%n",
-                            opt.optionName(), opt.currentPrice(), opt.sharesBought());
-                }
+                printEventStateDetails(updatedDetails);
+                System.out.println();
             }
             else {
                 System.out.println("\nTrade Failed: " + receipt.message());
@@ -287,7 +291,56 @@ public class ConsoleUI {
     }
 
     private void handleCloseEvent() {
-        //TODO
+        List<EventSummaryDTO> activeEvents = engine.getActiveEvents();
+        if(activeEvents.isEmpty()) {
+            System.out.println("There are no active events to close.");
+            return;
+        }
+
+        // display active events
+        System.out.println("###### Active Events ######");
+        for (int i=0;i<activeEvents.size();i++) {
+            printEventSummaryDetails(i+1, activeEvents.get(i));
+        }
+
+        // select event
+        int eventIndex = readIntInRange(
+                "Enter the number of the event to close (1-" + activeEvents.size() + "): ", 1, activeEvents.size());
+        int eventId = activeEvents.get(eventIndex - 1).id();
+
+        // show options to pick a winner
+        EventDetailsDTO details = engine.getEventState(eventId);
+        System.out.println("###### Select the Winning option for: " + details.name() + "######");
+        for (int i=0;i<details.options().size();i++)
+        {
+            System.out.printf(" %d) %s%n", i+1, details.options().get(i).optionName());
+        }
+
+        // pick a winner
+        int optionIndex = readIntInRange(
+                "Enter the number of the winning option (1-" + details.options().size() + "): ",
+                        1, details.options().size());
+        String winningOption = details.options().get(optionIndex - 1).optionName();
+
+        // close the event
+        CloseEventReceiptDTO receipt = engine.closeEvent(eventId, winningOption);
+
+        if (receipt.isSuccess()) {
+            System.out.println("\n *** Event Closed Successfully! ***");
+            System.out.println("Winning Option: " + receipt.winningOption());
+            System.out.printf("Total Payout to winners: %.2f%n", receipt.totalPayout());
+            System.out.printf("Commission Taken (On-Close): %.2f%n", receipt.commissionTaken());
+            System.out.printf("Leftover Subsidy Returned to Market Maker: %.2f%n", receipt.leftoverPool());
+
+            // show the final updated state of event
+            System.out.println("\n### Final Event State ###");
+            EventDetailsDTO finalDetails = engine.getEventState(eventId);
+            printEventStateDetails(finalDetails);
+            System.out.println();
+        }
+        else {
+            System.out.println("\nFailed to close event: " + receipt.message());
+        }
     }
 
     private void handleSaveState() {

@@ -128,13 +128,13 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double totalPayout = winningShares * 1.0;
 
         // 3. חישוב העמלה באמצעות הפונקציה הכללית שיצרנו!
-        double commission = calculateCommission(totalPayout, "on-close");
+        double commission = calculateCommission(totalPayout, "ON_CLOSE");
 
         // 4. כמה כסף נטו עובר למנצחים (אחרי ניכוי העמלה)
         double netPayout = totalPayout - commission;
 
         // 5. מה הערך שנשאר עכשיו בקופת האירוע? (זה הכסף שחוזר ל-MM)
-        double leftoverSubsidy = getPoolValue();
+        double leftoverSubsidy = getPoolValue() - totalPayout;
 
         return new CloseMarketResult(winningOption, totalPayout, commission, netPayout, leftoverSubsidy);
     }
