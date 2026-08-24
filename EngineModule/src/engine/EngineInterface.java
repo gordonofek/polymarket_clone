@@ -2,7 +2,6 @@ package engine;
 
 import engine.dto.*;
 import internals.ActionType;
-import internals.EventManager;
 
 import java.util.List;
 

@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Main-Class: Main
+Class-Path: engine.jar dependencies/angus-activation.jar dependencies/ja
+ karta.activation-api.jar dependencies/jakarta.xml.bind-api.jar dependen
+ cies/jaxb-core.jar dependencies/jaxb-impl.jar dependencies/jaxb-jxc.jar
+  dependencies/jaxb-xjc.jar
+
