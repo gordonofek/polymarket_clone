@@ -115,6 +115,12 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     }
 
     @Override
+    public TradingMethodType getTradingMethodType()
+    {
+        return TradingMethodType.LMSR;
+    }
+
+    @Override
     public double openMarket() {
         return getPoolValue();
     }

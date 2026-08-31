@@ -1,0 +1,445 @@
+package ui;
+
+import engine.Engine;
+import engine.EngineInterface;
+import engine.dto.EventDetailsDTO;
+import engine.dto.EventSummaryDTO;
+import engine.dto.OptionDetailsDTO;
+import engine.dto.TradeRecordDTO;
+import engine.dto.TradeReceiptDTO;
+
+import internals.ActionType;
+import javafx.concurrent.Task;
+import javafx.fxml.FXML;
+import javafx.geometry.HPos;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.VPos;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.text.TextAlignment;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class MainController {
+
+    EngineInterface engine = new Engine();
+
+    // Top part
+    @FXML private Button loadFileBtn;
+    @FXML private TextField filePathField;
+    @FXML ProgressBar progressBar;
+
+    // Filters
+    @FXML private TextField searchField;
+    @FXML private Button clearFiltersBtn;
+    @FXML ComboBox<String> methodFilter;
+    @FXML ComboBox<String> statusFilter;
+    @FXML ComboBox<String> commissionFilter;
+
+    // Events display
+    @FXML private VBox eventsContainer;
+
+    // Events
+    private List<EventSummaryDTO> allEvents = new ArrayList<>();
+    private EventSummaryDTO selectedEvent = null;
+
+    // Events details and Trade panel
+    @FXML private Label detailIdLabel;
+    @FXML private Label detailMethodLabel;
+    @FXML private Label detailStatusLabel;
+    @FXML private Label detailTitleLabel;
+    @FXML private Label detailDescLabel;
+    @FXML private Label detailCommLabel;
+    @FXML private FlowPane optionsContainer;
+    @FXML private ListView<Label> participationsListView;
+
+
+    @FXML
+    public void initialize() {
+        // listener
+        searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
+        methodFilter.setOnAction(e -> updateEventList());
+        statusFilter.setOnAction(e -> updateEventList());
+        commissionFilter.setOnAction(e -> updateEventList());
+
+        // clear filters
+        clearFiltersBtn.setOnAction(e -> {
+            searchField.clear();
+            methodFilter.getSelectionModel().selectFirst();
+            statusFilter.getSelectionModel().selectFirst();
+            commissionFilter.getSelectionModel().selectFirst();
+        });
+    }
+
+    public void loadData(List<EventSummaryDTO> events)
+    {
+        this.allEvents = events;
+        updateEventList();
+    }
+
+    public void updateEventList()
+    {
+        // clear the events
+        eventsContainer.getChildren().clear();
+        // get the filters
+        String search = searchField.getText().toLowerCase();
+        String method = methodFilter.getValue();
+        String status = statusFilter.getValue();
+        String commission = commissionFilter.getValue();
+
+        List<EventSummaryDTO> filteredEvents = allEvents.stream()
+                .filter(event -> search.isEmpty() || event.name().toLowerCase().contains(search))
+                .filter(event -> method == null || method.contains("All") || event.tradingMethodType().equalsIgnoreCase(method.replace(" ", "_")))
+                .filter(event -> status == null || status.contains("All") || event.status().equalsIgnoreCase(status.replace(" ", "_")))
+                .filter(event -> commission == null || commission.contains("All") || event.commissionType().equalsIgnoreCase(commission.replace(" ", "_")))
+                .toList();
+
+        // for every matching event, create a tile
+        for (EventSummaryDTO event : filteredEvents) {
+            GridPane tile = createEventTile(event);
+            eventsContainer.getChildren().add(tile);
+        }
+    }
+
+    private GridPane createEventTile(EventSummaryDTO eventSummary) {
+        EventDetailsDTO details = engine.getEventState(eventSummary.id());
+
+        GridPane tile = new GridPane();
+        tile.getStyleClass().add("event-tile");
+
+        // column constraints
+        ColumnConstraints col1 = new ColumnConstraints();
+        col1.setHgrow(Priority.ALWAYS);
+        ColumnConstraints col2 = new ColumnConstraints();
+        col2.setHalignment(HPos.RIGHT);
+        tile.getColumnConstraints().addAll(col1, col2);
+
+        // id, trading method, status
+        Label idLabel = new Label("#" + eventSummary.id());
+        idLabel.getStyleClass().add("event-id-label");
+
+        Label methodLabel = new Label(eventSummary.tradingMethodType());
+        methodLabel.getStyleClass().addAll("method-badge", "method-lmsr");
+
+        HBox topLeftBox = new HBox(8, idLabel, methodLabel);
+        topLeftBox.setAlignment(Pos.CENTER_LEFT);
+
+        // status
+        Label statusLabel = new Label(eventSummary.status().replace("_", " "));
+        statusLabel.getStyleClass().addAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+
+        // name, options header
+        Label titleLabel = new Label(eventSummary.name());
+        titleLabel.getStyleClass().add("event-title-label");
+
+        Label optionsHeader = new Label("Available Options:");
+        optionsHeader.getStyleClass().add("options-header-label");
+
+        // description, options
+        Label descLabel = new Label(eventSummary.description());
+        descLabel.setWrapText(true);
+        descLabel.getStyleClass().add("event-desc-label");
+        GridPane.setValignment(descLabel, VPos.TOP); // Align text to top
+
+        HBox optionsBox = new HBox(8);
+        optionsBox.setAlignment(Pos.TOP_RIGHT);
+
+        // buttons to event options
+        for (OptionDetailsDTO option : details.options()) {
+            Button optBtn = new Button(String.format("%s\n$%.2f", option.optionName(), option.currentPrice()));
+            optBtn.getStyleClass().add("option-preview-btn");
+            optBtn.setTextAlignment(TextAlignment.CENTER);
+            optionsBox.getChildren().add(optBtn);
+        }
+
+        // commission
+        Label commTitle = new Label("Commission:");
+        commTitle.getStyleClass().add("comm-title-label");
+
+        String commTypeStr = eventSummary.commissionType().replace("_", " ");
+        Label commVal = new Label(eventSummary.commission() + "% (" + commTypeStr + ")");
+        commVal.getStyleClass().add("comm-val-label");
+
+        HBox commBox = new HBox(6, commTitle, commVal);
+        commBox.setAlignment(Pos.BOTTOM_LEFT);
+        commBox.setPadding(new Insets(10, 0, 0, 0));
+
+        // add to grid
+        tile.add(topLeftBox, 0, 0);
+        tile.add(statusLabel, 1, 0);
+
+        tile.add(titleLabel, 0, 1);
+        tile.add(optionsHeader, 1, 1);
+
+        tile.add(descLabel, 0, 2);
+        tile.add(optionsBox, 1, 2);
+        GridPane.setRowSpan(optionsBox, 2); // Allow options box to span across rows 2 and 3
+
+        tile.add(commBox, 0, 3);
+
+        tile.setOnMouseClicked(e -> handleTileClick(eventSummary));
+
+        return tile;
+    }
+
+    @FXML
+    private void handleOpenFile()
+    {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Guess Market XML File");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML Files", "*.xml"));
+
+        Stage stage = (Stage) loadFileBtn.getScene().getWindow();
+        File selectedFile = fileChooser.showOpenDialog(stage);
+
+        if (selectedFile != null) {
+            String filePath = selectedFile.getAbsolutePath();
+
+            loadFileBtn.setDisable(true);
+            filePathField.setText("Loading: " + filePath);
+
+            progressBar.setVisible(true);
+
+            Task<List<EventSummaryDTO>> loadTask = new Task<>() {
+                @Override
+                protected List<EventSummaryDTO> call() throws Exception {
+                    int totalSteps = 20;
+                    for (int i = 1; i <= totalSteps; i++)
+                    {
+                        Thread.sleep(100);
+                        updateProgress(i, totalSteps);
+                    }
+                    engine.loadDataFromXML(filePath);
+                    return engine.getAllEvents();
+                }
+            };
+            progressBar.progressProperty().bind(loadTask.progressProperty());
+
+            loadTask.setOnSucceeded(e-> {
+                progressBar.setVisible(false);
+
+                loadFileBtn.setDisable(false);
+                filePathField.setText(filePath);
+
+                List<EventSummaryDTO> loadedEvents = loadTask.getValue();
+
+                loadData(loadedEvents);
+
+
+                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                successAlert.setTitle("Success");
+                successAlert.setHeaderText(null);
+                successAlert.setContentText("File loaded successfully into Guess Market");
+                successAlert.showAndWait();
+
+                //TODO: Fetch updated events from the engine and call updateEventList()
+            });
+
+            loadTask.setOnFailed(e-> {
+                loadFileBtn.setDisable(false);
+                filePathField.setText("Error loading file.");
+
+                Throwable exception = loadTask.getException();
+
+                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                errorAlert.setTitle("Loading Error");
+                errorAlert.setHeaderText("Failed to load the XML file");
+                errorAlert.setContentText(exception.getMessage());
+                errorAlert.showAndWait();
+            });
+            new Thread(loadTask).start();
+        }
+    }
+
+    @FXML
+    private void handleTileClick(EventSummaryDTO eventSummary)
+    {
+        this.selectedEvent = eventSummary;
+
+        boolean isOrderBook = eventSummary.tradingMethodType().contains("ORDER_BOOK");
+
+        detailIdLabel.setText("#" + eventSummary.id());
+
+        String methodStr = eventSummary.tradingMethodType();
+        detailMethodLabel.setText(methodStr);
+        detailMethodLabel.getStyleClass().setAll("method-badge", "method-" + methodStr.toLowerCase());
+
+        String statusStr = eventSummary.status().replace("_", " ");
+        detailStatusLabel.setText(statusStr);
+        detailStatusLabel.getStyleClass().setAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+
+        detailTitleLabel.setText(eventSummary.name());
+        detailDescLabel.setText(eventSummary.description());
+
+        String commTypeStr = eventSummary.commissionType().replace("_", " ");
+        detailCommLabel.setText(eventSummary.commission() + "% (" + commTypeStr + ")");
+
+        optionsContainer.getChildren().clear();
+
+        EventDetailsDTO details = engine.getEventState(eventSummary.id());
+
+        for (OptionDetailsDTO option : details.options()) {
+            double price = option.currentPrice();
+            String optionName = option.optionName();
+
+            VBox card = new VBox(8);
+            card.setAlignment(Pos.CENTER);
+            card.setPrefWidth(200);
+
+            card.getStyleClass().add("option-card");
+
+            Label nameLbl = new Label(optionName);
+            nameLbl.getStyleClass().add("option-title-label");
+
+            Label priceLbl = new Label(String.format("Price: %.2f$", price));
+            priceLbl.getStyleClass().add("option-price-label");
+
+            HBox actionButtons = new HBox(6);
+            actionButtons.setAlignment(Pos.CENTER);
+
+            Button buyBtn = new Button("Buy");
+            buyBtn.getStyleClass().add("buy-option-btn");
+            HBox.setHgrow(buyBtn, Priority.ALWAYS);
+            buyBtn.setMaxWidth(Double.MAX_VALUE);
+            buyBtn.setOnAction(e->handleBuyAction(eventSummary, optionName));
+
+            actionButtons.getChildren().add(buyBtn);
+
+            if(isOrderBook) {
+                Button sellBtn = new Button("Sell");
+                sellBtn.getStyleClass().add("sell-option-btn");
+                HBox.setHgrow(sellBtn, Priority.ALWAYS);
+                sellBtn.setMaxWidth(Double.MAX_VALUE);
+                sellBtn.setOnAction(e->handleSellAction(eventSummary, optionName));
+
+                actionButtons.getChildren().add(sellBtn);
+            }
+            card.getChildren().addAll(nameLbl, priceLbl, actionButtons);
+            optionsContainer.getChildren().add(card);
+        }
+
+        participationsListView.getItems().clear();
+        List<TradeRecordDTO> history = details.tradeHistory();
+        if(history.isEmpty()) {
+            Label emptyLbl = new Label("No trades recorded yet for this event. :C");
+            participationsListView.getItems().add(emptyLbl);
+        }
+        else {
+            for (TradeRecordDTO trade : history)
+            {
+                String text = String.format("[%s] Option: %s | Amount: %d | Paid: %.2f$",
+                        trade.action(),
+                        trade.optionName(),
+                        trade.amount(),
+                        trade.pricePaid()
+                );
+                Label tradeLabel = new Label(text);
+                tradeLabel.setMaxWidth(Double.MAX_VALUE);
+
+                if (trade.action() == ActionType.BUY) {
+                    tradeLabel.getStyleClass().add("history-buy");
+                }
+                else {
+                    tradeLabel.getStyleClass().add("history-sell");
+                }
+                participationsListView.getItems().add(tradeLabel);
+            }
+        }
+    }
+
+    private void handleBuyAction(EventSummaryDTO event, String optionName) {
+        boolean isOrderBook = event.tradingMethodType().toUpperCase().contains("ORDER_BOOK");
+        showTradeDialog(event, optionName, ActionType.BUY, isOrderBook);
+    }
+
+    private void handleSellAction(EventSummaryDTO event, String optionName) {
+        showTradeDialog(event, optionName, ActionType.SELL, true);
+    }
+
+    private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle(action.name() + " Shares - " + optionName);
+        dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
+
+        // Set the button types
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField amountField = new TextField();
+        amountField.setPromptText("e.g. 10");
+        grid.add(new Label("Amount of shares:"), 0, 0);
+        grid.add(amountField, 1, 0);
+
+        TextField priceField = new TextField();
+        priceField.setPromptText("e.g. 0.50");
+
+        // Only show the price limit field if it's an Order Book event
+        if (isOrderBook) {
+            grid.add(new Label("Price limit ($):"), 0, 1);
+            grid.add(priceField, 1, 1);
+        }
+
+        dialog.getDialogPane().setContent(grid);
+
+        // Convert the result when OK is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == ButtonType.OK) {
+                try {
+                    int amount = Integer.parseInt(amountField.getText().trim());
+                    if (amount <= 0) {
+                        showAlert(Alert.AlertType.ERROR, "Invalid Input", "Amount must be greater than 0.");
+                        return null;
+                    }
+
+                    double priceLimit = 0.0;
+                    if (isOrderBook) {
+                        priceLimit = Double.parseDouble(priceField.getText().trim());
+                        if (priceLimit <= 0) {
+                            showAlert(Alert.AlertType.ERROR, "Invalid Input", "Price limit must be greater than 0.");
+                            return null;
+                        }
+                    }
+
+                    // Send the trade to the engine
+                    TradeReceiptDTO receipt = engine.placeOrder(event.id(), optionName, amount, action, priceLimit);
+
+                    if (receipt.isSuccess()) {
+                        String msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
+                                receipt.totalCost(), receipt.commission());
+                        showAlert(Alert.AlertType.INFORMATION, "Success", msg);
+
+                        // Immediately re-trigger the click event to refresh the right panel with new prices!
+                        handleTileClick(event);
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
+                    }
+
+                } catch (NumberFormatException e) {
+                    showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter valid numeric values.");
+                }
+            }
+            return null;
+        });
+
+        dialog.showAndWait();
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+}

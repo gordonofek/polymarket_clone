@@ -21,6 +21,9 @@ public interface TradingMethods {
     // activates the event and deducts the initial subsidy from the event's internal MM account
     double openMarket();
 
+    // returns the type of the trading method
+    TradingMethodType getTradingMethodType();
+
     // distributes funds and takes final commissions
     CloseMarketResult closeMarket(String winningOption);
 

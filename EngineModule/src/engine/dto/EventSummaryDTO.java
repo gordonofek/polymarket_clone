@@ -9,5 +9,6 @@ public record EventSummaryDTO(
         String status, // למשל: "OPEN", "CLOSED", "NOT_STARTED"
         int commission,
         String commissionType,
-        List<String> options
+        List<String> options,
+        String tradingMethodType
 ) {}
