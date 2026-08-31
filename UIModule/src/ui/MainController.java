@@ -9,6 +9,7 @@ import engine.dto.TradeRecordDTO;
 import engine.dto.TradeReceiptDTO;
 
 import internals.ActionType;
+import javafx.animation.Animation;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;
@@ -21,10 +22,12 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+import javafx.animation.ScaleTransition;
+import javafx.util.Duration;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class MainController {
 
@@ -183,7 +186,22 @@ public class MainController {
 
         tile.add(commBox, 0, 3);
 
-        tile.setOnMouseClicked(e -> handleTileClick(eventSummary));
+
+        // ----------- Testing Animation --------------
+        ScaleTransition clickAnimation = new ScaleTransition(Duration.millis(200), tile);
+        clickAnimation.setFromX(1.0);
+        clickAnimation.setFromY(1.0);
+        clickAnimation.setToX(1.02);
+        clickAnimation.setToY(1.02);
+        clickAnimation.setAutoReverse(true);
+        clickAnimation.setCycleCount(2);
+
+        tile.setOnMouseClicked(e -> {
+            if(clickAnimation.getStatus() != Animation.Status.RUNNING) {
+                clickAnimation.playFromStart();
+            }
+            handleTileClick(eventSummary);
+        });
 
         return tile;
     }
