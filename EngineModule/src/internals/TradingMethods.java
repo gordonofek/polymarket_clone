@@ -13,7 +13,7 @@ public interface TradingMethods {
     TradeResult executeOrder(TradeRequest request);
 
     // calc the commission participants owe the Market Maker
-    double calculateCommission(double baseAmount, String currentPhase);
+    double calculateCommission(double baseAmount, CommissionType currentPhase);
 
     // gets the total amount of shares bought for a specific option
     int getOptionShares(String optionName);

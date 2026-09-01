@@ -65,11 +65,11 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     @Override
     public TradeResult executeOrder(TradeRequest request) {
         // 1. חסימת מכירה
-        if (request.action() != ActionType.BUY) {
-            return new TradeResult(false, request.optionName(), 0, 0, 0, "Selling is not supported in LMSR");
+        if (request.getAction() != ActionType.BUY) {
+            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Selling is not supported in LMSR");
         }
 
-        String option = request.optionName();
+        String option = request.getOptionName();
 
         // 2. בדיקה שהאופציה בכלל קיימת באירוע
         if (!this.optionShares.containsKey(option)) {
@@ -80,32 +80,33 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double poolBefore = getPoolValue();
 
         Map<String, Integer> simulatedMap = new HashMap<>(this.optionShares);
-        simulatedMap.put(option, simulatedMap.get(option) + request.amount());
+        simulatedMap.put(option, simulatedMap.get(option) + request.getAmount());
         double poolAfter = calculateCost(simulatedMap); // שימוש בפונקציית העזר שלך!
 
         double rawCost = poolAfter - poolBefore;
 
         // 4. חישוב העמלה (רק אם השיטה היא on-purchase)
-        double commission = calculateCommission(rawCost, "ON_PURCHASE");
+        double commission = calculateCommission(rawCost, CommissionType.ON_CLOSE);
 
         double finalCost = rawCost + commission;
 
         // 5. עדכון המפה האמיתית
-        this.optionShares.put(option, this.optionShares.get(option) + request.amount());
+        this.optionShares.put(option, this.optionShares.get(option) + request.getAmount());
 
-        TradeResult finalReceipt = new TradeResult(true, option, request.amount(), finalCost,
+        TradeResult finalReceipt = new TradeResult(true, option, request.getAmount(), finalCost,
                 commission, "Trade successful");
         this.tradeHistory.add(finalReceipt);
         return finalReceipt;
     }
 
     @Override
-    public double calculateCommission(double baseAmount, String currentPhase) {
-        // בודקים האם שלבה הגבייה הנוכחי תואם לשיטת העמלה שהוגדר ב-XML לאירוע הזה
-        if (this.commissionType.name().equals(currentPhase)) {
+    public double calculateCommission(double baseAmount, CommissionType currentPhase) {
+        // check that we have matching commissionType if so calc
+        if (this.commissionType == currentPhase) {
             return baseAmount * (this.commissionPercent / 100.0);
         }
-        return 0.0; // אם אנחנו בשלב רכישה אבל העמלה היא on-close, נחזיר 0
+        // else return 0.0
+        return 0.0;
     }
 
     @Override
@@ -128,7 +129,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double totalPayout = winningShares * 1.0;
 
         // 3. חישוב העמלה באמצעות הפונקציה הכללית שיצרנו!
-        double commission = calculateCommission(totalPayout, "ON_CLOSE");
+        double commission = calculateCommission(totalPayout, commissionType.ON_CLOSE);
 
         // 4. כמה כסף נטו עובר למנצחים (אחרי ניכוי העמלה)
         double netPayout = totalPayout - commission;
