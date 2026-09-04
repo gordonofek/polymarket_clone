@@ -137,3 +137,76 @@
     -fx-font-weight: bold;
     -fx-text-fill: #2e7d32;
 }
+
+/* Hide vertical grid lines entirely */
+.poly-chart .chart-vertical-grid-lines {
+    -fx-stroke: transparent;
+}
+
+/* Faint, dashed horizontal grid lines */
+.poly-chart .chart-horizontal-grid-lines {
+    -fx-stroke: #e0e0e0; /* Light gray for the light theme */
+    -fx-stroke-dash-array: 3 5;
+}
+
+/* Make the graph lines slightly thicker */
+.poly-chart .chart-series-line {
+    -fx-stroke-width: 2.5px;
+}
+
+/* =========================================
+   TAB PANE STYLING
+========================================= */
+
+/* Make the background area behind the tabs transparent or a flat color */
+.tab-pane .tab-header-background {
+    -fx-background-color: transparent;
+}
+
+/* Adjust the padding around the header area */
+.tab-pane .tab-header-area {
+    -fx-padding: 5 0 0 0;
+}
+
+/* 1. Style for individual tabs (Unselected) */
+.tab-pane .tab {
+    -fx-background-color: #f3f4f6; /* Flat light grey */
+    -fx-background-radius: 6 6 0 0; /* Rounded top corners */
+    -fx-padding: 8 25 8 25; /* Thicker tabs with more breathing room */
+    -fx-border-color: #d2d6dc;
+    -fx-border-width: 1 1 0 1; /* Border on top, left, right. None on bottom */
+    -fx-border-radius: 6 6 0 0;
+    -fx-cursor: hand;
+}
+
+/* Text style for unselected tabs */
+.tab-pane .tab .tab-label {
+    -fx-text-fill: #6b7280;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+/* Hover effect */
+.tab-pane .tab:hover {
+    -fx-background-color: #e5e7eb;
+}
+
+/* 2. Style for the SELECTED tab */
+.tab-pane .tab:selected {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-width: 1 1 0 1;
+    -fx-border-radius: 6 6 0 0;
+}
+
+/* Text style for the SELECTED tab (Using the blue from your header) */
+.tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #2854b5;
+}
+
+/* 3. Clean up the focus ring */
+.tab-pane .tab:focus,
+.tab-pane:focused .tab:selected {
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}

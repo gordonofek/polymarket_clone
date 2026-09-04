@@ -12,15 +12,19 @@
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
-
 <?import javafx.scene.control.ProgressBar?>
-<VBox fx:controller="ui.MainController" stylesheets="@default-theme.css" minHeight="600.0" minWidth="900.0" prefHeight="750.0" prefWidth="1100.0" spacing="10.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+
+<VBox fx:controller="ui.MainController" stylesheets="@default-theme.css" minHeight="650.0" minWidth="900.0" prefHeight="750.0" prefWidth="1100.0" spacing="10.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
    <padding>
       <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
    </padding>
@@ -31,7 +35,7 @@
             <Font name="System Bold" size="18.0" />
          </font>
       </Label>
-      
+
       <!-- TOP BAR: Button and Text Field -->
       <HBox alignment="CENTER_LEFT" spacing="10.0">
          <children>
@@ -47,19 +51,19 @@
 
       <!-- MAIN TAB PANE -->
       <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
-        <tabs>
-          <!-- ==================== EVENTS TAB ==================== -->
-          <Tab text="Events">
+         <tabs>
+            <!-- ==================== EVENTS TAB ==================== -->
+            <Tab text="Events">
                <content>
                   <SplitPane dividerPositions="0.55" prefHeight="160.0" prefWidth="200.0">
-                    <items>
+                     <items>
                         <!-- LEFT SIDE: Events Filter and Tiles -->
                         <VBox minWidth="450.0" spacing="10.0">
                            <padding>
                               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                            </padding>
                            <children>
-                              
+
                               <!-- 2-Row Filter Section -->
                               <VBox spacing="10.0">
                                  <children>
@@ -78,7 +82,7 @@
                                           </Button>
                                        </children>
                                     </HBox>
-                                    
+
                                     <!-- Row 2: Dropdowns -->
                                     <HBox alignment="CENTER_LEFT" spacing="15.0">
                                        <children>
@@ -119,7 +123,7 @@
                                     </HBox>
                                  </children>
                               </VBox>
-                              
+
                               <!-- Scrollable Tiles Area -->
                               <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS">
                                  <content>
@@ -132,7 +136,7 @@
                               </ScrollPane>
                            </children>
                         </VBox>
-                        
+
                         <!-- ==================== RIGHT SIDE: Event Details & Trade ==================== -->
                         <VBox minWidth="350.0" spacing="12.0">
                            <padding>
@@ -144,9 +148,9 @@
                                     <Font size="22.0" />
                                  </font>
                               </Label>
-                              
-                              <!-- 1. EXPANDED EVENT DETAILS PANEL (Replaces the empty space) -->
-                              <VBox fx:id="eventDetailsPanel" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 12;">
+
+                              <!-- 1. EXPANDED EVENT DETAILS PANEL -->
+                              <VBox fx:id="eventDetailsPanel" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 12;" VBox.vgrow="NEVER">
                                  <children>
                                     <HBox alignment="CENTER_LEFT" spacing="8.0">
                                        <children>
@@ -167,19 +171,34 @@
                                  </children>
                               </VBox>
 
-                              <!-- 2. DYNAMIC OPTIONS PANEL (Supports Buy & Sell buttons) -->
-                              <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" prefHeight="180.0">
+                              <!-- 2. DYNAMIC OPTIONS PANEL (Locked to exactly 265px to fit 4 options perfectly) -->
+                              <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="NEVER" prefHeight="265.0" minHeight="265.0" maxHeight="265.0">
                                  <content>
-                                    <FlowPane fx:id="optionsContainer" alignment="CENTER" hgap="15.0" vgap="15.0">
+                                    <VBox fx:id="optionsContainer" spacing="10.0">
                                        <padding>
                                           <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                                        </padding>
-                                    </FlowPane>
+                                    </VBox>
                                  </content>
                               </ScrollPane>
-                              
-                              <!-- 3. PARTICIPATION HISTORY LISTVIEW -->
-                              <VBox fx:id="participationsContainer" prefHeight="160.0" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8;" VBox.vgrow="ALWAYS">
+
+                              <!-- 3. PRICE HISTORY GRAPH PANEL -->
+                              <VBox spacing="5.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;" VBox.vgrow="ALWAYS" minHeight="150.0">
+                                 <children>
+                                    <LineChart fx:id="priceHistoryChart" styleClass="poly-chart" createSymbols="false" animated="false" legendSide="TOP" VBox.vgrow="ALWAYS">
+                                       <xAxis>
+                                          <NumberAxis fx:id="xAxis" autoRanging="true" forceZeroInRange="false" tickLabelsVisible="false" tickMarkVisible="false" minorTickVisible="false"/>
+                                       </xAxis>
+                                       <!-- Added side="RIGHT" and ensured tickLabelsVisible="true" -->
+                                       <yAxis>
+                                          <NumberAxis fx:id="yAxis" side="RIGHT" autoRanging="false" lowerBound="0.0" upperBound="1.0" tickUnit="0.25" tickLabelsVisible="true" tickMarkVisible="false" minorTickVisible="false"/>
+                                       </yAxis>
+                                    </LineChart>
+                                 </children>
+                              </VBox>
+
+                              <!-- 4. PARTICIPATION HISTORY LISTVIEW (Adjusted to 230px for 6-7 rows) -->
+                              <VBox fx:id="participationsContainer" minHeight="230.0" prefHeight="230.0" maxHeight="230.0" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8;" VBox.vgrow="NEVER">
                                  <padding>
                                     <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
                                  </padding>
@@ -192,15 +211,16 @@
                                     <ListView fx:id="participationsListView" style="-fx-background-insets: 0; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" />
                                  </children>
                               </VBox>
+
                            </children>
                         </VBox>
-                    </items>
+                     </items>
                   </SplitPane>
                </content>
-          </Tab>
-          
-          <!-- ==================== USERS TAB ==================== -->
-          <Tab text="Users">
+            </Tab>
+
+            <!-- ==================== USERS TAB ==================== -->
+            <Tab text="Users">
                <content>
                   <SplitPane dividerPositions="0.3" prefHeight="160.0" prefWidth="200.0">
                      <items>
@@ -214,7 +234,7 @@
                               </Label>
                            </children>
                         </StackPane>
-                        
+
                         <!-- RIGHT SIDE: Single User Details -->
                         <VBox minWidth="350.0" spacing="10.0">
                            <padding>
@@ -260,8 +280,8 @@
                      </items>
                   </SplitPane>
                </content>
-          </Tab>
-        </tabs>
+            </Tab>
+         </tabs>
       </TabPane>
    </children>
 </VBox>

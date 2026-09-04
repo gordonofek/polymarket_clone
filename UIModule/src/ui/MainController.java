@@ -16,6 +16,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
@@ -28,6 +29,10 @@ import javafx.util.Duration;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart;
+import javafx.util.StringConverter;
 
 public class MainController {
 
@@ -59,8 +64,11 @@ public class MainController {
     @FXML private Label detailTitleLabel;
     @FXML private Label detailDescLabel;
     @FXML private Label detailCommLabel;
-    @FXML private FlowPane optionsContainer;
+    @FXML private VBox optionsContainer;
     @FXML private ListView<Label> participationsListView;
+
+    @FXML private LineChart<Number, Number> priceHistoryChart;
+    @FXML private NumberAxis yAxis;
 
 
     @FXML
@@ -305,41 +313,45 @@ public class MainController {
         for (OptionDetailsDTO option : details.options()) {
             double price = option.currentPrice();
             String optionName = option.optionName();
+            double percentage = price * 100;
 
-            VBox card = new VBox(8);
-            card.setAlignment(Pos.CENTER);
-            card.setPrefWidth(200);
-
-            card.getStyleClass().add("option-card");
+            HBox row = new HBox(15);
+            row.setAlignment(Pos.CENTER_LEFT);
+            row.setPrefHeight(50);
+            row.getStyleClass().add("option-card");
 
             Label nameLbl = new Label(optionName);
-            nameLbl.getStyleClass().add("option-title-label");
+            nameLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-            Label priceLbl = new Label(String.format("Price: %.2f$", price));
-            priceLbl.getStyleClass().add("option-price-label");
+            Label percentLbl = new Label(String.format("%.1f%%", percentage));
+            percentLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #555555;");
 
-            HBox actionButtons = new HBox(6);
-            actionButtons.setAlignment(Pos.CENTER);
+            HBox namePercentBox = new HBox(8, nameLbl, percentLbl);
+            namePercentBox.setAlignment(Pos.CENTER_LEFT);
 
-            Button buyBtn = new Button("Buy");
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            Label priceLbl = new Label(String.format("$%.2f", price));
+            priceLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+
+            HBox actionButtons = new HBox(10);
+            actionButtons.setAlignment(Pos.CENTER_RIGHT);
+
+            Button buyBtn = new Button(String.format("Buy %.2f¢", price * 100));
             buyBtn.getStyleClass().add("buy-option-btn");
-            HBox.setHgrow(buyBtn, Priority.ALWAYS);
-            buyBtn.setMaxWidth(Double.MAX_VALUE);
-            buyBtn.setOnAction(e->handleBuyAction(eventSummary, optionName));
-
+            buyBtn.setOnAction(e -> handleBuyAction(eventSummary, optionName));
             actionButtons.getChildren().add(buyBtn);
 
             if(isOrderBook) {
                 Button sellBtn = new Button("Sell");
                 sellBtn.getStyleClass().add("sell-option-btn");
-                HBox.setHgrow(sellBtn, Priority.ALWAYS);
-                sellBtn.setMaxWidth(Double.MAX_VALUE);
-                sellBtn.setOnAction(e->handleSellAction(eventSummary, optionName));
-
+                sellBtn.setOnAction(e -> handleSellAction(eventSummary, optionName));
                 actionButtons.getChildren().add(sellBtn);
             }
-            card.getChildren().addAll(nameLbl, priceLbl, actionButtons);
-            optionsContainer.getChildren().add(card);
+
+            row.getChildren().addAll(namePercentBox, spacer, priceLbl, actionButtons);
+            optionsContainer.getChildren().add(row);
         }
 
         participationsListView.getItems().clear();
@@ -369,6 +381,7 @@ public class MainController {
                 participationsListView.getItems().add(tradeLabel);
             }
         }
+        updatePriceGraph(details);
     }
 
     private void handleBuyAction(EventSummaryDTO event, String optionName) {
@@ -385,7 +398,6 @@ public class MainController {
         dialog.setTitle(action.name() + " Shares - " + optionName);
         dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
 
-        // Set the button types
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
@@ -401,7 +413,6 @@ public class MainController {
         TextField priceField = new TextField();
         priceField.setPromptText("e.g. 0.50");
 
-        // Only show the price limit field if it's an Order Book event
         if (isOrderBook) {
             grid.add(new Label("Price limit ($):"), 0, 1);
             grid.add(priceField, 1, 1);
@@ -409,7 +420,6 @@ public class MainController {
 
         dialog.getDialogPane().setContent(grid);
 
-        // Convert the result when OK is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
                 try {
@@ -428,7 +438,6 @@ public class MainController {
                         }
                     }
 
-                    // Send the trade to the engine
                     TradeReceiptDTO receipt = engine.placeOrder(event.id(), optionName, amount, action, priceLimit);
 
                     if (receipt.isSuccess()) {
@@ -436,7 +445,6 @@ public class MainController {
                                 receipt.totalCost(), receipt.commission());
                         showAlert(Alert.AlertType.INFORMATION, "Success", msg);
 
-                        // Immediately re-trigger the click event to refresh the right panel with new prices!
                         handleTileClick(event);
                     } else {
                         showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
@@ -458,6 +466,33 @@ public class MainController {
         alert.setHeaderText(null);
         alert.setContentText(content);
         alert.showAndWait();
+    }
+
+    private void updatePriceGraph(EventDetailsDTO details) {
+        priceHistoryChart.getData().clear();
+
+        for (OptionDetailsDTO option : details.options()) {
+            XYChart.Series<Number, Number> series = new XYChart.Series<>();
+            series.setName(option.optionName());
+
+            int tradeCounter = 1;
+            List<TradeRecordDTO> history = details.tradeHistory();
+
+            for (int i = history.size() - 1; i >= 0; i--) {
+                TradeRecordDTO trade = history.get(i);
+
+                if (trade.optionName().equals(option.optionName())) {
+                    // Calculate unit price so it fits on the 0.0 to 1.0 Y-axis
+                    double unitPrice = trade.amount() > 0 ? trade.pricePaid() / trade.amount() : 0.0;
+                    series.getData().add(new XYChart.Data<>(tradeCounter, unitPrice));
+                    tradeCounter++;
+                }
+            }
+
+            series.getData().add(new XYChart.Data<>(tradeCounter, option.currentPrice()));
+
+            priceHistoryChart.getData().add(series);
+        }
     }
 
 }
