@@ -90,11 +90,37 @@ public class Engine implements EngineInterface {
 
         // 3. Cleverly use a Stream to build the List<OptionDetailsDTO>
         List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
-                .map(optionName -> new OptionDetailsDTO(
-                        optionName,
-                        event.getOptionPrice(optionName),
-                        event.getOptionShares(optionName)
-                ))
+                .map(optionName -> {
+                    // נתונים בסיסיים שקיימים בכל אירוע
+                    double currentPrice = event.getOptionPrice(optionName);
+                    int shares = event.getOptionShares(optionName);
+
+                    // משתני עזר לסטטיסטיקות שיקבלו ערך רק אם זה Order Book
+                    double bid = 0.0, ask = 0.0, mid = 0.0, spread = 0.0;
+
+                    // שולפים את שיטת המסחר האמיתית
+                    TradingMethods method = event.getTradingMethod();
+
+                    // שימוש ב-Pattern Matching (זמין ב-Java מתקדם)
+                    // כדי לבדוק אם זה Order Book ולהמיר אותו באותה שורה
+                    if (method instanceof OrderBookTradingMethod obMethod) {
+                        bid = obMethod.getHighestBid(optionName);
+                        ask = obMethod.getLowestAsk(optionName);
+                        mid = obMethod.getMidPrice(optionName);
+                        spread = obMethod.getSpread(optionName);
+                    }
+
+                    // מחזירים את ה-DTO השלם!
+                    return new OptionDetailsDTO(
+                            optionName,
+                            currentPrice,
+                            shares,
+                            bid,
+                            ask,
+                            mid,
+                            spread
+                    );
+                })
                 .toList();
 
         // 4. Cleverly use a Stream to map the raw trade history to TradeRecordDTOs
