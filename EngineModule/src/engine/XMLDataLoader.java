@@ -2,10 +2,7 @@ package engine;
 
 import engine.xml.GMEvent;
 import engine.xml.GuessMarket;
-import internals.CommissionType;
-import internals.Event;
-import internals.LMSREvent;
-import internals.LMSRTradingMethod;
+import internals.*;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
@@ -28,10 +25,6 @@ public static List<Event> loadEventsFromXML(String filePath) throws Exception {
         if (!file.exists() || !file.getName().endsWith(".xml")) {
             throw new InvalidXMLException("The file does not exist or is not an XML file.");
         }
-
-//        JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
-//        Unmarshaller unmarshaller = context.createUnmarshaller();
-//        GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(file);
 
         JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
         Unmarshaller unmarshaller = context.createUnmarshaller();
@@ -103,7 +96,7 @@ public static List<Event> loadEventsFromXML(String filePath) throws Exception {
             // ג. יצירת האירוע האמיתי של המנוע
             List<String> optionsList = xmlEvent.getGMOptions().getGMOption();
 
-            Event newEvent = new LMSREvent(
+            Event newEvent = new MarketEvent(
                     xmlEvent.getId(),
                     fullEventName,
                     xmlEvent.getDescription(),
@@ -115,6 +108,7 @@ public static List<Event> loadEventsFromXML(String filePath) throws Exception {
 
             engineEvents.add(newEvent);
         }
+
         return engineEvents;
     }
 }

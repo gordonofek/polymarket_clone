@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  *  a base implementation of the Event interface.
  */
-public abstract class AbstractEvent implements Event, Serializable {
+public class MarketEvent implements Event, Serializable {
     protected int id;
     protected String name;
     protected String description;
@@ -19,7 +19,7 @@ public abstract class AbstractEvent implements Event, Serializable {
     protected EventStatus status;
     protected TradingMethods tradingMethod;
 
-    public AbstractEvent(int id, String name, String description, int commissionPercent,
+    public MarketEvent(int id, String name, String description, int commissionPercent,
                          CommissionType commissionType, List<String> options, TradingMethods tradingMethod) {
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(commissionType, "CommissionType must not be null");
@@ -73,17 +73,22 @@ public abstract class AbstractEvent implements Event, Serializable {
     @Override
     public int getOptionShares(String optionName) { return this.tradingMethod.getOptionShares(optionName); }
 
+    @Override
+    public TradingMethods getTradingMethod() {
+        return this.tradingMethod;
+    }
+
     /**
      *  validates the event state before passing the trade to the responsible tradingMethod
      */
     @Override
     public TradeResult processTrade(TradeRequest request) {
         if (this.status != EventStatus.OPEN) {
-            return new TradeResult(false, request.optionName(), 0, 0, 0, "Event is not active");
+            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Event is not active");
         }
-        if (!this.options.contains(request.optionName()))
+        if (!this.options.contains(request.getOptionName()))
         {
-            return new TradeResult(false, request.optionName(), 0, 0, 0, "Unknown option: "+request.optionName());
+            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Unknown option: "+request.getOptionName());
         }
         return this.tradingMethod.executeOrder(request);
     }
@@ -107,5 +112,25 @@ public abstract class AbstractEvent implements Event, Serializable {
         {
             throw new IllegalArgumentException("Unknown option:"+optionName);
         }
+    }
+
+    @Override
+    public void openEvent() {
+        if(this.status != EventStatus.NOT_STARTED) {
+            throw new IllegalStateException("Event is already open or closed");
+        }
+        this.status = EventStatus.OPEN;
+        this.tradingMethod.openMarket();
+    }
+
+    @Override
+    public CloseMarketResult resolveEvent(String winningOption){
+        if (this.status != EventStatus.OPEN) {
+            throw new IllegalStateException("Only open events can be resolved");
+        }
+        validateOption(winningOption);
+        this.winningOption = winningOption;
+        this.status = EventStatus.CLOSED;
+        return this.tradingMethod.closeMarket(winningOption);
     }
 }
