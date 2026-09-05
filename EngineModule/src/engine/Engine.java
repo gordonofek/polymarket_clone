@@ -48,7 +48,8 @@ public class Engine implements EngineInterface {
                         event.getStatus().name(), // Converts the EventStatus enum to a String
                         event.getCommissionPercent(),
                         event.getCommissionType().name(),
-                        event.getOptions()
+                        event.getOptions(),
+                        event.getEventTradingMethodType().name()
                 ))
                 .toList();
     }
@@ -69,7 +70,8 @@ public class Engine implements EngineInterface {
                         event.getStatus().name(), // Converts the EventStatus enum to a String
                         event.getCommissionPercent(),
                         event.getCommissionType().name(),
-                        event.getOptions()
+                        event.getOptions(),
+                        event.getEventTradingMethodType().name()
                 );
                 list.add(dto);
             }
