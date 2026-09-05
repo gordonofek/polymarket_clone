@@ -185,7 +185,7 @@
                               <!-- 3. PRICE HISTORY GRAPH PANEL -->
                               <VBox spacing="5.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;" VBox.vgrow="ALWAYS" minHeight="150.0">
                                  <children>
-                                    <LineChart fx:id="priceHistoryChart" styleClass="poly-chart" createSymbols="false" animated="false" legendSide="TOP" VBox.vgrow="ALWAYS">
+                                    <LineChart fx:id="priceHistoryChart" styleClass="poly-chart" createSymbols="true" animated="false" legendSide="TOP" VBox.vgrow="ALWAYS">
                                        <xAxis>
                                           <NumberAxis fx:id="xAxis" autoRanging="true" forceZeroInRange="false" tickLabelsVisible="false" tickMarkVisible="false" minorTickVisible="false"/>
                                        </xAxis>

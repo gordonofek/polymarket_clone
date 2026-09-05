@@ -86,6 +86,18 @@ public class MainController {
             statusFilter.getSelectionModel().selectFirst();
             commissionFilter.getSelectionModel().selectFirst();
         });
+
+        yAxis.setTickLabelFormatter(new StringConverter<Number>() {
+            @Override
+            public String toString(Number value) {
+                return Math.round(value.doubleValue() * 100) + "%";
+            }
+
+            @Override
+            public Number fromString(String string) {
+                return Double.parseDouble(string.replace("%", "")) / 100.0;
+            }
+        });
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -398,6 +410,7 @@ public class MainController {
         dialog.setTitle(action.name() + " Shares - " + optionName);
         dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
 
+        // Set the button types
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
@@ -413,6 +426,7 @@ public class MainController {
         TextField priceField = new TextField();
         priceField.setPromptText("e.g. 0.50");
 
+        // Only show the price limit field if it's an Order Book event
         if (isOrderBook) {
             grid.add(new Label("Price limit ($):"), 0, 1);
             grid.add(priceField, 1, 1);
@@ -420,6 +434,7 @@ public class MainController {
 
         dialog.getDialogPane().setContent(grid);
 
+        // Convert the result when OK is clicked
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
                 try {
@@ -438,6 +453,7 @@ public class MainController {
                         }
                     }
 
+                    // Send the trade to the engine
                     TradeReceiptDTO receipt = engine.placeOrder(event.id(), optionName, amount, action, priceLimit);
 
                     if (receipt.isSuccess()) {
@@ -445,6 +461,7 @@ public class MainController {
                                 receipt.totalCost(), receipt.commission());
                         showAlert(Alert.AlertType.INFORMATION, "Success", msg);
 
+                        // Immediately re-trigger the click event to refresh the right panel with new prices!
                         handleTileClick(event);
                     } else {
                         showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
@@ -478,6 +495,7 @@ public class MainController {
             int tradeCounter = 1;
             List<TradeRecordDTO> history = details.tradeHistory();
 
+            // Loop backwards because history is newest-to-oldest, but graphs read left-to-right!
             for (int i = history.size() - 1; i >= 0; i--) {
                 TradeRecordDTO trade = history.get(i);
 
@@ -489,9 +507,18 @@ public class MainController {
                 }
             }
 
-            series.getData().add(new XYChart.Data<>(tradeCounter, option.currentPrice()));
+            // Optional: Plot the CURRENT price as the final point on the graph
+            XYChart.Data<Number, Number> lastPoint = new XYChart.Data<>(tradeCounter, option.currentPrice());
+            series.getData().add(lastPoint);
 
             priceHistoryChart.getData().add(series);
+
+            // Tag only the last point as the glowing "current price" dot (see
+            // .poly-chart .endpoint-marker in default-theme.css). All other
+            // per-point symbols stay invisible so the line itself reads as clean.
+            if (lastPoint.getNode() != null) {
+                lastPoint.getNode().getStyleClass().add("endpoint-marker");
+            }
         }
     }
 
