@@ -40,6 +40,9 @@ public interface Event {
     // gets the type of the trading method in the event
     TradingMethodType getEventTradingMethodType();
 
+    // record the participants in the event (those who hold shares for some option in the event)
+    void recordParticipant(String username, String optionName, int amount);
+
     /** opens the event, transitions the event from Not-Started to Open
         for LMSR: The Market Maker pays the initial subsidy
         for Order Book: The Market Maker buys the initial shares

@@ -41,6 +41,15 @@ public interface EngineInterface {
      */
     EventDetailsDTO getEventState(int eventId);
 
+    /**
+     * returns the details of the user
+     */
+    UserDetailsDTO getUserDetails(String username);
+
+    /**
+     * returns all the users
+     */
+    List<UserSummaryDTO> getAllUsers();
 
     // ==========================================
     // ביצוע פעולות (Commands)
@@ -49,7 +58,7 @@ public interface EngineInterface {
     /**
      * מבצע פקודת מסחר (קנייה או מכירה) ומחזיר קבלה עם התוצאה (פקודה 4).
      */
-    TradeReceiptDTO placeOrder(int eventId, String optionName, int amount, ActionType action, double limitPrice);
+    TradeReceiptDTO placeOrder(String username, int eventId, String optionName, int amount, ActionType action, double limitPrice);
 
     /**
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).

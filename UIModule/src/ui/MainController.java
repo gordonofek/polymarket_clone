@@ -2,11 +2,7 @@ package ui;
 
 import engine.Engine;
 import engine.EngineInterface;
-import engine.dto.EventDetailsDTO;
-import engine.dto.EventSummaryDTO;
-import engine.dto.OptionDetailsDTO;
-import engine.dto.TradeRecordDTO;
-import engine.dto.TradeReceiptDTO;
+import engine.dto.*;
 
 import internals.ActionType;
 import javafx.animation.Animation;
@@ -70,19 +66,22 @@ public class MainController {
 
 
     // users list
-    @FXML private TableView<?> usersTableView;
-    @FXML private TableColumn<?, String> userNameCol;
-    @FXML private TableColumn<?, Number> userBalanceCol;
+    @FXML private TableView<UserSummaryDTO> usersTableView;
+    @FXML private TableColumn<UserSummaryDTO, String> userNameCol;
+    @FXML private TableColumn<UserSummaryDTO, Number> userBalanceCol;
+    private String activeUsername = null;
+    @FXML private Label activeUserDisplayLabel;
 
     // top header
     @FXML private Label userNameLabel;
     @FXML private Label userBalanceLabel;
 
     // portfolio table
-    @FXML private TableView<?> portfolioTableView;
-    @FXML private TableColumn<?, String> portfolioEventCol;
-    @FXML private TableColumn<?, String> portfolioOptionCol;
-    @FXML private TableColumn<?, Number> portfolioSharesCol;
+    // portfolio table
+    @FXML private TableView<PortfolioItemDTO> portfolioTableView;
+    @FXML private TableColumn<PortfolioItemDTO, String> portfolioEventCol;
+    @FXML private TableColumn<PortfolioItemDTO, String> portfolioOptionCol;
+    @FXML private TableColumn<PortfolioItemDTO, Number> portfolioSharesCol;
 
     // event overview
     @FXML private Label userEventTitleLabel;
@@ -102,6 +101,17 @@ public class MainController {
             methodFilter.getSelectionModel().selectFirst();
             statusFilter.getSelectionModel().selectFirst();
             commissionFilter.getSelectionModel().selectFirst();
+        });
+
+        usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                loadUserDetails(newSelection);
+
+                this.activeUsername = newSelection.name();
+                if (activeUserDisplayLabel != null) {
+                    activeUserDisplayLabel.setText("Trading as: " + activeUsername);
+                }
+            }
         });
     }
 
@@ -411,6 +421,10 @@ public class MainController {
     }
 
     private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
+        if (this.activeUsername == null) {
+            showAlert(Alert.AlertType.WARNING, "No User Selected", "Please go to the Users tab and select a user to trade.");
+            return;
+        }
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(action.name() + " Shares - " + optionName);
         dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
@@ -459,7 +473,7 @@ public class MainController {
                     }
 
                     // Send the trade to the engine
-                    TradeReceiptDTO receipt = engine.placeOrder(event.id(), optionName, amount, action, priceLimit);
+                    TradeReceiptDTO receipt = engine.placeOrder(activeUsername ,event.id(), optionName, amount, action, priceLimit);
 
                     if (receipt.isSuccess()) {
                         String msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
@@ -525,6 +539,18 @@ public class MainController {
                 lastPoint.getNode().getStyleClass().add("endpoint-marker");
             }
         }
+    }
+
+    private void loadUserDetails(UserSummaryDTO user)
+    {
+        UserDetailsDTO details = engine.getUserDetails(user.name());
+        userNameLabel.setText(details.name());
+        userBalanceLabel.setText(String.format("$%.2f", details.balance()));
+        portfolioTableView.getItems().clear();
+        userEventOptionsBox.getChildren().clear();
+        userEventTitleLabel.setText("Select an event from the portfolio to view it's current state");
+
+        portfolioTableView.getItems().addAll(details.portfolio());
     }
 
 }

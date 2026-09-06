@@ -1,9 +1,9 @@
 package engine.dto;
 
-import java.util.Map;
+import java.util.List;
 
 public record UserDetailsDTO(
         String name,
         double balance,
-        Map<Integer, Map<String, Integer>> portfolio
+        List<PortfolioItemDTO> portfolio
 ) {}
