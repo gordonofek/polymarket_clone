@@ -86,7 +86,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double rawCost = poolAfter - poolBefore;
 
         // 4. חישוב העמלה (רק אם השיטה היא on-purchase)
-        double commission = calculateCommission(rawCost, CommissionType.ON_CLOSE);
+        double commission = calculateCommission(rawCost, CommissionType.ON_PURCHASE);
 
         double finalCost = rawCost + commission;
 
@@ -113,6 +113,12 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     public int getOptionShares(String optionName)
     {
         return this.optionShares.getOrDefault(optionName, 0);
+    }
+
+    @Override
+    public TradingMethodType getTradingMethodType()
+    {
+        return TradingMethodType.LMSR;
     }
 
     @Override

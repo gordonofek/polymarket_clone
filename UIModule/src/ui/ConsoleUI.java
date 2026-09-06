@@ -264,7 +264,7 @@ public class ConsoleUI {
             int amount = readPositiveInt("Enter the amount of shares you want to buy: ");
 
             // execute trade
-            TradeReceiptDTO receipt = engine.placeOrder(eventId, chosenOption, amount, ActionType.BUY, 0.0);
+            TradeReceiptDTO receipt = engine.placeOrder("^-^ Console",eventId, chosenOption, amount, ActionType.BUY, 0.0);
 
             if (receipt.isSuccess()) {
                 System.out.println("\n*** Trade Successful! ***");
