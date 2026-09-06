@@ -16,7 +16,6 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
-import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
@@ -31,8 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.util.StringConverter;
 
 public class MainController {
 
@@ -68,8 +67,26 @@ public class MainController {
     @FXML private ListView<Label> participationsListView;
 
     @FXML private LineChart<Number, Number> priceHistoryChart;
-    @FXML private NumberAxis yAxis;
 
+
+    // users list
+    @FXML private TableView<?> usersTableView;
+    @FXML private TableColumn<?, String> userNameCol;
+    @FXML private TableColumn<?, Number> userBalanceCol;
+
+    // top header
+    @FXML private Label userNameLabel;
+    @FXML private Label userBalanceLabel;
+
+    // portfolio table
+    @FXML private TableView<?> portfolioTableView;
+    @FXML private TableColumn<?, String> portfolioEventCol;
+    @FXML private TableColumn<?, String> portfolioOptionCol;
+    @FXML private TableColumn<?, Number> portfolioSharesCol;
+
+    // event overview
+    @FXML private Label userEventTitleLabel;
+    @FXML private VBox userEventOptionsBox;
 
     @FXML
     public void initialize() {
@@ -85,18 +102,6 @@ public class MainController {
             methodFilter.getSelectionModel().selectFirst();
             statusFilter.getSelectionModel().selectFirst();
             commissionFilter.getSelectionModel().selectFirst();
-        });
-
-        yAxis.setTickLabelFormatter(new StringConverter<Number>() {
-            @Override
-            public String toString(Number value) {
-                return Math.round(value.doubleValue() * 100) + "%";
-            }
-
-            @Override
-            public Number fromString(String string) {
-                return Double.parseDouble(string.replace("%", "")) / 100.0;
-            }
         });
     }
 
@@ -275,8 +280,6 @@ public class MainController {
                 successAlert.setHeaderText(null);
                 successAlert.setContentText("File loaded successfully into Guess Market");
                 successAlert.showAndWait();
-
-                //TODO: Fetch updated events from the engine and call updateEventList()
             });
 
             loadTask.setOnFailed(e-> {
@@ -327,25 +330,26 @@ public class MainController {
             String optionName = option.optionName();
             double percentage = price * 100;
 
-            HBox row = new HBox(15);
+            HBox row = new HBox(20);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPrefHeight(50);
             row.getStyleClass().add("option-card");
 
+            // Left side: Option Name using the CSS class
             Label nameLbl = new Label(optionName);
-            nameLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            nameLbl.getStyleClass().add("option-name-label");
 
-            Label percentLbl = new Label(String.format("%.1f%%", percentage));
-            percentLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #555555;");
-
-            HBox namePercentBox = new HBox(8, nameLbl, percentLbl);
-            namePercentBox.setAlignment(Pos.CENTER_LEFT);
-
+            // Spacer
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
+            // Right side: Percentage using the CSS class
+            Label percentLbl = new Label(String.format("%.1f%%", percentage));
+            percentLbl.getStyleClass().add("option-percent-label");
+
+            // Right side: Price using the CSS class
             Label priceLbl = new Label(String.format("$%.2f", price));
-            priceLbl.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+            priceLbl.getStyleClass().add("option-price-label");
 
             HBox actionButtons = new HBox(10);
             actionButtons.setAlignment(Pos.CENTER_RIGHT);
@@ -362,7 +366,8 @@ public class MainController {
                 actionButtons.getChildren().add(sellBtn);
             }
 
-            row.getChildren().addAll(namePercentBox, spacer, priceLbl, actionButtons);
+            // Elements added cleanly with the spacer separating them
+            row.getChildren().addAll(nameLbl, spacer, percentLbl, priceLbl, actionButtons);
             optionsContainer.getChildren().add(row);
         }
 

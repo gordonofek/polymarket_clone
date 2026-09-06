@@ -82,11 +82,11 @@ public abstract class AbstractEvent implements Event, Serializable {
     @Override
     public TradeResult processTrade(TradeRequest request) {
         if (this.status != EventStatus.OPEN) {
-            return new TradeResult(false, request.optionName(), 0, 0, 0, "Event is not active");
+            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Event is not active");
         }
-        if (!this.options.contains(request.optionName()))
+        if (!this.options.contains(request.getOptionName()))
         {
-            return new TradeResult(false, request.optionName(), 0, 0, 0, "Unknown option: "+request.optionName());
+            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Unknown option: "+request.getOptionName());
         }
         return this.tradingMethod.executeOrder(request);
     }
