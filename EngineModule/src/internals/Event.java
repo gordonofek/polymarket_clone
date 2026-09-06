@@ -32,6 +32,8 @@ public interface Event {
 
     int getOptionShares(String optionName);
 
+    TradingMethods getTradingMethod();
+
     // gets the history of all trades in the event
     List<TradeResult> getTradeHistory();
 
