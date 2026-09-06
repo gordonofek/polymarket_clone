@@ -11,13 +11,14 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.control.ProgressBar?>
@@ -125,7 +126,7 @@
                               </VBox>
 
                               <!-- Scrollable Tiles Area -->
-                              <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="ALWAYS">
+                              <ScrollPane fitToWidth="true" styleClass="transparent-scroll-pane" VBox.vgrow="ALWAYS">
                                  <content>
                                     <VBox fx:id="eventsContainer" spacing="15.0">
                                        <padding>
@@ -150,7 +151,10 @@
                               </Label>
 
                               <!-- 1. EXPANDED EVENT DETAILS PANEL -->
-                              <VBox fx:id="eventDetailsPanel" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 12;" VBox.vgrow="NEVER">
+                              <VBox fx:id="eventDetailsPanel" spacing="8.0" styleClass="card-panel" VBox.vgrow="NEVER">
+                                 <padding>
+                                    <Insets bottom="12.0" left="12.0" right="12.0" top="12.0" />
+                                 </padding>
                                  <children>
                                     <HBox alignment="CENTER_LEFT" spacing="8.0">
                                        <children>
@@ -171,8 +175,8 @@
                                  </children>
                               </VBox>
 
-                              <!-- 2. DYNAMIC OPTIONS PANEL (Locked to exactly 265px to fit 4 options perfectly) -->
-                              <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;" VBox.vgrow="NEVER" prefHeight="265.0" minHeight="265.0" maxHeight="265.0">
+                              <!-- 2. DYNAMIC OPTIONS PANEL -->
+                              <ScrollPane fitToWidth="true" styleClass="transparent-scroll-pane" VBox.vgrow="NEVER" prefHeight="265.0" minHeight="265.0" maxHeight="265.0">
                                  <content>
                                     <VBox fx:id="optionsContainer" spacing="10.0">
                                        <padding>
@@ -183,13 +187,15 @@
                               </ScrollPane>
 
                               <!-- 3. PRICE HISTORY GRAPH PANEL -->
-                              <VBox spacing="5.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;" VBox.vgrow="ALWAYS" minHeight="150.0">
+                              <VBox spacing="5.0" styleClass="card-panel" VBox.vgrow="ALWAYS" minHeight="150.0">
+                                 <padding>
+                                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                 </padding>
                                  <children>
                                     <LineChart fx:id="priceHistoryChart" styleClass="poly-chart" createSymbols="true" animated="false" legendSide="TOP" VBox.vgrow="ALWAYS">
                                        <xAxis>
                                           <NumberAxis fx:id="xAxis" autoRanging="true" forceZeroInRange="false" tickLabelsVisible="false" tickMarkVisible="false" minorTickVisible="false"/>
                                        </xAxis>
-                                       <!-- Added side="RIGHT" and ensured tickLabelsVisible="true" -->
                                        <yAxis>
                                           <NumberAxis fx:id="yAxis" side="RIGHT" autoRanging="false" lowerBound="0.0" upperBound="1.0" tickUnit="0.25" tickLabelsVisible="true" tickMarkVisible="false" minorTickVisible="false"/>
                                        </yAxis>
@@ -197,8 +203,8 @@
                                  </children>
                               </VBox>
 
-                              <!-- 4. PARTICIPATION HISTORY LISTVIEW (Adjusted to 230px for 6-7 rows) -->
-                              <VBox fx:id="participationsContainer" minHeight="230.0" prefHeight="230.0" maxHeight="230.0" spacing="8.0" style="-fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-radius: 8; -fx-background-radius: 8;" VBox.vgrow="NEVER">
+                              <!-- 4. PARTICIPATION HISTORY LISTVIEW -->
+                              <VBox fx:id="participationsContainer" minHeight="180.0" prefHeight="180.0" maxHeight="180.0" spacing="8.0" styleClass="card-panel" VBox.vgrow="NEVER">
                                  <padding>
                                     <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
                                  </padding>
@@ -208,7 +214,7 @@
                                           <Font name="System Bold" size="14.0" />
                                        </font>
                                     </Label>
-                                    <ListView fx:id="participationsListView" style="-fx-background-insets: 0; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" />
+                                    <ListView fx:id="participationsListView" styleClass="borderless-list-view" VBox.vgrow="ALWAYS" />
                                  </children>
                               </VBox>
 
@@ -222,59 +228,87 @@
             <!-- ==================== USERS TAB ==================== -->
             <Tab text="Users">
                <content>
-                  <SplitPane dividerPositions="0.3" prefHeight="160.0" prefWidth="200.0">
+                  <SplitPane dividerPositions="0.35" prefHeight="160.0" prefWidth="200.0">
                      <items>
                         <!-- LEFT SIDE: Users Table -->
-                        <StackPane fx:id="usersTableContainer" minWidth="250.0" style="-fx-border-color: lightgray;">
-                           <children>
-                              <Label text="Users Table">
-                                 <font>
-                                    <Font size="24.0" />
-                                 </font>
-                              </Label>
-                           </children>
-                        </StackPane>
-
-                        <!-- RIGHT SIDE: Single User Details -->
-                        <VBox minWidth="350.0" spacing="10.0">
+                        <VBox spacing="10.0" styleClass="card-panel">
                            <padding>
                               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                            </padding>
                            <children>
-                              <HBox alignment="CENTER_LEFT">
+                              <Label text="Registered Users" styleClass="event-title-label" />
+                              <TableView fx:id="usersTableView" VBox.vgrow="ALWAYS" styleClass="borderless-list-view">
+                                 <columns>
+                                    <TableColumn fx:id="userNameCol" prefWidth="140.0" text="User Name" reorderable="false" />
+                                    <TableColumn fx:id="userBalanceCol" prefWidth="130.0" text="Balance ($)" reorderable="false" />
+                                 </columns>
+                              </TableView>
+                           </children>
+                        </VBox>
+
+                        <!-- RIGHT SIDE: Single User Details -->
+                        <VBox minWidth="350.0" spacing="12.0">
+                           <padding>
+                              <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                           </padding>
+                           <children>
+                              <!-- Header: User Name and Balance -->
+                              <HBox alignment="CENTER_LEFT" spacing="15.0" styleClass="card-panel">
+                                 <padding>
+                                    <Insets bottom="10.0" left="15.0" right="15.0" top="10.0" />
+                                 </padding>
                                  <children>
-                                    <Region HBox.hgrow="ALWAYS" />
-                                    <Label fx:id="userNameLabel" text="Single User Details">
+                                    <Label fx:id="userNameLabel" text="Select a user..." styleClass="event-title-label">
                                        <font>
                                           <Font size="20.0" />
                                        </font>
                                     </Label>
                                     <Region HBox.hgrow="ALWAYS" />
-                                    <Label fx:id="userBalanceLabel" style="-fx-border-color: gray; -fx-background-color: transparent;" text="Account Balance">
-                                       <padding>
-                                          <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
-                                       </padding>
-                                    </Label>
+                                    <Label text="Available Cash:" styleClass="comm-title-label" />
+                                    <!-- FIXED: Escaped the FXML variable string to prevent KeyPath.parse crash -->
+                                    <Label fx:id="userBalanceLabel" text="\$0.00" styleClass="option-price-label" />
                                  </children>
                               </HBox>
-                              <StackPane fx:id="userParticipationsContainer" style="-fx-border-color: lightgray;" VBox.vgrow="ALWAYS">
-                                 <children>
-                                    <Label text="Events Participation \ owner">
-                                       <font>
-                                          <Font size="18.0" />
-                                       </font>
-                                    </Label>
-                                 </children>
-                              </StackPane>
-                              <StackPane fx:id="userSingleEventContainer" style="-fx-border-color: lightgray;" VBox.vgrow="ALWAYS">
-                                 <children>
-                                    <Label text="Single event details and trade">
-                                       <font>
-                                          <Font size="18.0" />
-                                       </font>
-                                    </Label>
-                                 </children>
-                              </StackPane>
+
+                              <!-- Vertical Split for Portfolio and Event Details -->
+                              <SplitPane dividerPositions="0.6" orientation="VERTICAL" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-padding: 0;">
+                                 <items>
+                                    <!-- Top Half: Portfolio Table -->
+                                    <VBox spacing="8.0" styleClass="card-panel">
+                                       <padding>
+                                          <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                                       </padding>
+                                       <children>
+                                          <Label text="User's Portfolio" styleClass="event-title-label" />
+                                          <TableView fx:id="portfolioTableView" VBox.vgrow="ALWAYS" styleClass="borderless-list-view">
+                                             <columns>
+                                                <TableColumn fx:id="portfolioEventCol" prefWidth="180.0" text="Event Name" reorderable="false" />
+                                                <TableColumn fx:id="portfolioOptionCol" prefWidth="120.0" text="Option" reorderable="false" />
+                                                <TableColumn fx:id="portfolioSharesCol" prefWidth="110.0" text="Shares Owned" reorderable="false" />
+                                             </columns>
+                                          </TableView>
+                                       </children>
+                                    </VBox>
+
+                                    <!-- Bottom Half: Selected Event Overview -->
+                                    <VBox spacing="8.0" styleClass="card-panel">
+                                       <padding>
+                                          <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                                       </padding>
+                                       <children>
+                                          <Label text="Selected Event Overview" styleClass="event-title-label" />
+                                          <Label fx:id="userEventTitleLabel" text="Select an event from the portfolio to view its current state." wrapText="true" styleClass="event-desc-label" />
+
+                                          <!-- Container for dynamically added option prices -->
+                                          <ScrollPane fitToWidth="true" styleClass="transparent-scroll-pane" VBox.vgrow="ALWAYS">
+                                             <content>
+                                                <VBox fx:id="userEventOptionsBox" spacing="5.0" />
+                                             </content>
+                                          </ScrollPane>
+                                       </children>
+                                    </VBox>
+                                 </items>
+                              </SplitPane>
                            </children>
                         </VBox>
                      </items>

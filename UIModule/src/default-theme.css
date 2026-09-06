@@ -1,4 +1,37 @@
 /* default-theme.css */
+
+/* =========================================
+   STRUCTURAL & PANEL CLASSES
+========================================= */
+.transparent-scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.card-panel {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.borderless-list-view {
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+}
+
+.users-bordered-pane {
+    -fx-border-color: lightgray;
+}
+
+.user-balance-label {
+    -fx-border-color: gray;
+    -fx-background-color: transparent;
+    -fx-padding: 5 10 5 10;
+}
+
+/* =========================================
+   EVENTS TAB STYLING
+========================================= */
 .event-tile {
     -fx-background-color: white;
     -fx-border-color: #e0e0e0;
@@ -23,7 +56,7 @@
 }
 
 .method-order_book {
-    -fx-background-color: #fff3e0; /* Example color for OB */
+    -fx-background-color: #fff3e0;
     -fx-text-fill: #e65100;
 }
 
@@ -95,11 +128,6 @@
     -fx-background-color: #c5221f;
 }
 
-.option-actions-box {
-    -fx-spacing: 8;
-    -fx-alignment: center;
-}
-
 /* --- History participation --- */
 .history-buy {
     -fx-background-color: #e6f4ea;
@@ -117,7 +145,7 @@
     -fx-font-weight: bold;
 }
 
-/* --- Option Card --- */
+/* --- Option Card (Right Panel) --- */
 .option-card {
     -fx-background-color: #ffffff;
     -fx-border-color: #d2d6dc;
@@ -126,23 +154,26 @@
     -fx-padding: 10;
 }
 
-/* --- Option Card Labels --- */
-.option-title-label {
+.option-name-label {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 
+.option-percent-label {
+    -fx-font-size: 17px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #111111;
+}
+
 .option-price-label {
-    -fx-font-size: 12px;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2e7d32;
+    -fx-text-fill: black;
 }
 
 /* =========================================
    POLYMARKET-STYLE PRICE CHART
 ========================================= */
-
-/* Kill the default border/frame around the plot so it reads as "open" */
 .poly-chart {
     -fx-padding: 0;
 }
@@ -155,29 +186,24 @@
     -fx-padding: 5 5 0 5;
 }
 
-/* Hide vertical grid lines entirely */
 .poly-chart .chart-vertical-grid-lines {
     -fx-stroke: transparent;
 }
 
-/* Faint, dashed horizontal grid lines */
 .poly-chart .chart-horizontal-grid-lines {
     -fx-stroke: #ebebeb;
     -fx-stroke-dash-array: 2 4;
 }
 
-/* Remove the box/frame drawn around the whole plot area */
 .poly-chart .chart-plot-background,
 .poly-chart .plot-content {
     -fx-border-color: transparent;
 }
 
-/* Thin, smooth-looking lines like Polymarket's sparkline style */
 .poly-chart .chart-series-line {
     -fx-stroke-width: 1.8px;
 }
 
-/* Axis lines/ticks: keep only the faint right-hand percentage scale */
 .poly-chart .axis {
     -fx-tick-label-fill: #9aa0a6;
     -fx-font-size: 11px;
@@ -194,7 +220,6 @@
     -fx-stroke: transparent;
 }
 
-/* --- Legend: colored dot + bold label, no box around it --- */
 .poly-chart .chart-legend {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
@@ -208,7 +233,6 @@
     -fx-text-fill: #333333;
 }
 
-/* Turn the legend swatch into a round dot instead of a line segment */
 .poly-chart .chart-legend-item-symbol {
     -fx-background-radius: 5em;
     -fx-background-insets: 0;
@@ -216,26 +240,19 @@
     -fx-border-color: transparent;
 }
 
-/* --- Explicit, ordered palette so line + legend dot + (optional) badge colors agree --- */
 .poly-chart .default-color0.chart-series-line { -fx-stroke: #2f6fed; }
 .poly-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #2f6fed, transparent; }
-
 .poly-chart .default-color1.chart-series-line { -fx-stroke: #f5a623; }
 .poly-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #f5a623, transparent; }
-
 .poly-chart .default-color2.chart-series-line { -fx-stroke: #2e9e5b; }
 .poly-chart .default-color2.chart-legend-item-symbol { -fx-background-color: #2e9e5b, transparent; }
-
 .poly-chart .default-color3.chart-series-line { -fx-stroke: #e6483f; }
 .poly-chart .default-color3.chart-legend-item-symbol { -fx-background-color: #e6483f, transparent; }
-
 .poly-chart .default-color4.chart-series-line { -fx-stroke: #9b59b6; }
 .poly-chart .default-color4.chart-legend-item-symbol { -fx-background-color: #9b59b6, transparent; }
-
 .poly-chart .default-color5.chart-series-line { -fx-stroke: #17a2b8; }
 .poly-chart .default-color5.chart-legend-item-symbol { -fx-background-color: #17a2b8, transparent; }
 
-/* Hide the default per-point symbols entirely... */
 .poly-chart .chart-line-symbol {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
@@ -243,8 +260,6 @@
     -fx-padding: 0;
 }
 
-/* ...except the one we tag "endpoint-marker" in code, which becomes the
-   little glowing dot at the end of each line (see updatePriceGraph). */
 .poly-chart .endpoint-marker {
     -fx-background-radius: 5em;
     -fx-padding: 5px;
@@ -265,56 +280,110 @@
 /* =========================================
    TAB PANE STYLING
 ========================================= */
-
-/* Make the background area behind the tabs transparent or a flat color */
 .tab-pane .tab-header-background {
     -fx-background-color: transparent;
 }
-
-/* Adjust the padding around the header area */
 .tab-pane .tab-header-area {
     -fx-padding: 5 0 0 0;
 }
-
-/* 1. Style for individual tabs (Unselected) */
 .tab-pane .tab {
-    -fx-background-color: #f3f4f6; /* Flat light grey */
-    -fx-background-radius: 6 6 0 0; /* Rounded top corners */
-    -fx-padding: 8 25 8 25; /* Thicker tabs with more breathing room */
+    -fx-background-color: #f3f4f6;
+    -fx-background-radius: 6 6 0 0;
+    -fx-padding: 8 25 8 25;
     -fx-border-color: #d2d6dc;
-    -fx-border-width: 1 1 0 1; /* Border on top, left, right. None on bottom */
+    -fx-border-width: 1 1 0 1;
     -fx-border-radius: 6 6 0 0;
     -fx-cursor: hand;
 }
-
-/* Text style for unselected tabs */
 .tab-pane .tab .tab-label {
     -fx-text-fill: #6b7280;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
 }
-
-/* Hover effect */
 .tab-pane .tab:hover {
     -fx-background-color: #e5e7eb;
 }
-
-/* 2. Style for the SELECTED tab */
 .tab-pane .tab:selected {
     -fx-background-color: white;
     -fx-border-color: #d2d6dc;
     -fx-border-width: 1 1 0 1;
     -fx-border-radius: 6 6 0 0;
 }
-
-/* Text style for the SELECTED tab (Using the blue from your header) */
 .tab-pane .tab:selected .tab-label {
     -fx-text-fill: #2854b5;
 }
-
-/* 3. Clean up the focus ring */
 .tab-pane .tab:focus,
 .tab-pane:focused .tab:selected {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
+}
+
+
+/* ==================================
+    TABLE VIEW STYLING
+   ==================================*/
+/* Remove default grey borders */
+.table-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* Kills the horizontal line under the header */
+.table-view .column-header-background {
+    -fx-background-color: white;
+    -fx-border-width: 0;
+    -fx-padding: 0 0 8 0; /* Pushes the first row down slightly */
+}
+
+/* Make the entire column header a Pill */
+.table-view .column-header {
+    -fx-background-color: #f3f4f6; /* Light grey pill background */
+    -fx-background-radius: 20; /* Creates the ellipse shape */
+    -fx-background-insets: 0 4 0 4; /* MAGICAL: Creates a 4px transparent gap between pills! */
+    -fx-border-width: 0;
+    -fx-size: 32px;
+    -fx-padding: 0 5 0 5;
+}
+
+/* Hide the unused header filler space on the right */
+.table-view .filler {
+    -fx-background-color: transparent;
+    -fx-border-width: 0;
+}
+
+/* The text inside the header */
+.table-view .column-header .label {
+    -fx-text-fill: #4b5563;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-alignment: CENTER;
+}
+
+/* Make the sort arrow match the text color */
+.table-view .column-header .arrow {
+    -fx-background-color: #4b5563;
+}
+
+/* Row styling */
+.table-row-cell {
+    -fx-background-color: white;
+    -fx-border-color: #f3f4f6;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 38px;
+}
+
+/* Subtle zebra striping for alternate rows */
+.table-row-cell:odd {
+    -fx-background-color: #fafbfc;
+}
+
+/* Beautiful blue selection highlight */
+.table-row-cell:selected {
+    -fx-background-color: #eef2ff;
+    -fx-text-fill: #2854b5;
+    -fx-border-width: 0;
+}
+
+.table-row-cell:selected .text {
+    -fx-fill: #2854b5;
 }

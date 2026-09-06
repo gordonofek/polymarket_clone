@@ -86,7 +86,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         double rawCost = poolAfter - poolBefore;
 
         // 4. חישוב העמלה (רק אם השיטה היא on-purchase)
-        double commission = calculateCommission(rawCost, CommissionType.ON_CLOSE);
+        double commission = calculateCommission(rawCost, CommissionType.ON_PURCHASE);
 
         double finalCost = rawCost + commission;
 
