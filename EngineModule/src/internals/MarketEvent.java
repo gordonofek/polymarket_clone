@@ -1,9 +1,7 @@
 package internals;
 
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  *  a base implementation of the Event interface.
@@ -18,6 +16,8 @@ public class MarketEvent implements Event, Serializable {
     protected String winningOption;
     protected EventStatus status;
     protected TradingMethods tradingMethod;
+
+    protected Map<String, Map<String, Integer>> participantsHoldings = new HashMap<>();
 
     public MarketEvent(int id, String name, String description, int commissionPercent,
                          CommissionType commissionType, List<String> options, TradingMethods tradingMethod) {
@@ -104,6 +104,18 @@ public class MarketEvent implements Event, Serializable {
     public List<TradeResult> getTradeHistory()
     {
         return this.tradingMethod.getTradeHistory();
+    }
+
+    @Override
+    public TradingMethodType getEventTradingMethodType() {
+        return this.tradingMethod.getTradingMethodType();
+    }
+
+    @Override
+    public void recordParticipant(String username, String optionName, int amount) {
+        this.participantsHoldings.putIfAbsent(username, new HashMap<>());
+        Map<String, Integer> userShares = this.participantsHoldings.get(username);
+        userShares.put(optionName, userShares.getOrDefault(optionName, 0) + amount);
     }
 
     protected void validateOption(String optionName)

@@ -75,6 +75,12 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
         return sell_requests.get(optionName);
     }
 
+    @Override
+    public TradingMethodType getTradingMethodType()
+    {
+        return TradingMethodType.ORDER_BOOK;
+    }
+
     public double getLastPrice(String optionName)
     {
         return lastPrices.get(optionName);
