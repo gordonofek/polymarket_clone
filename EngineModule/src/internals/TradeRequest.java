@@ -1,6 +1,9 @@
 package internals;
 
+import java.util.UUID;
+
 public class TradeRequest {
+    private String orderId;
     private ActionType action;
     private String optionName;
     private int amount;
@@ -8,6 +11,7 @@ public class TradeRequest {
     private String username;
 
     public TradeRequest(ActionType action, String optionName, int amount, double limitPrice, String username) {
+        this.orderId = UUID.randomUUID().toString();
         this.action = action;
         this.optionName = optionName;
         this.amount = amount;
@@ -17,6 +21,7 @@ public class TradeRequest {
 
     // constructor that supports exercise 1 and use tester as the username
     public TradeRequest(ActionType action, String optionName, int amount, double limitPrice) {
+        this.orderId = UUID.randomUUID().toString();
         this.action = action;
         this.optionName = optionName;
         this.amount = amount;
@@ -26,6 +31,7 @@ public class TradeRequest {
     }
 
     // --- Getters ---
+    public String getOrderId() { return orderId; }
     public ActionType getAction() { return action; }
     public String getOptionName() { return optionName; }
     public int getAmount() { return amount; }

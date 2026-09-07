@@ -66,14 +66,14 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     public TradeResult executeOrder(TradeRequest request) {
         // 1. חסימת מכירה
         if (request.getAction() != ActionType.BUY) {
-            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Selling is not supported in LMSR");
+            return new TradeResult(request.getOrderId(),false, request.getOptionName(), ActionType.SELL, 0, 0, 0, "Selling is not supported in LMSR");
         }
 
         String option = request.getOptionName();
 
         // 2. בדיקה שהאופציה בכלל קיימת באירוע
         if (!this.optionShares.containsKey(option)) {
-            return new TradeResult(false, option, 0, 0, 0, "Option does not exist");
+            return new TradeResult(request.getOrderId(),false, option, ActionType.BUY, 0, 0, 0, "Option does not exist");
         }
 
         // 3. חישוב עלות הקנייה ה"נקייה" (באמצעות מפה מדומה)
@@ -93,7 +93,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         // 5. עדכון המפה האמיתית
         this.optionShares.put(option, this.optionShares.get(option) + request.getAmount());
 
-        TradeResult finalReceipt = new TradeResult(true, option, request.getAmount(), finalCost,
+        TradeResult finalReceipt = new TradeResult(request.getOrderId(),true, option, ActionType.BUY, request.getAmount(), finalCost,
                 commission, "Trade successful");
         this.tradeHistory.add(finalReceipt);
         return finalReceipt;

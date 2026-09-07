@@ -171,10 +171,16 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             //calc commission(if there is ON_PURCHASE in this event) and creating TradeResult to add to tradeHistory
             double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
-            TradeResult trade = new TradeResult(true, optionName, tradedShares, totalTransactionCost,
-                    commission, "Trade successful");
+            TradeResult trade1 = new TradeResult(buy_request.getOrderId(),true, optionName,
+                    ActionType.BUY, tradedShares, totalTransactionCost,
+                    commission, "Bought successfully");
 
-            this.tradeHistory.add(trade);
+            TradeResult trade2 = new TradeResult(sell_request.getOrderId(),true, optionName,
+                    ActionType.SELL, tradedShares, totalTransactionCost,
+                    0.0, "Sold successfully");
+
+            this.tradeHistory.add(trade1);
+            this.tradeHistory.add(trade2);
         }
     }
 
@@ -262,7 +268,7 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
                 // 4. Create the receipt and add it to the history
-                TradeResult trade = new TradeResult(true, optionName, minShares, totalTransactionCost, commission, "Mint successful");
+                TradeResult trade = new TradeResult(topBuyer.getOrderId(),true, optionName, ActionType.BUY, minShares, totalTransactionCost, commission, "Mint successful");
                 this.tradeHistory.add(trade);
 
                 // Clean up: If this buyer got all their shares, remove them safely
@@ -299,13 +305,15 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
     public TradeResult executeOrder(TradeRequest request)
     {
         // get the attributes of the request
+        String id = request.getOrderId();
         ActionType type = request.getAction();
         String name = request.getOptionName();
         double price = request.getLimitPrice();
 
         // Validation Check: Does this option actually exist in our market?
         if (!buy_requests.containsKey(name)) {
-            return new TradeResult(false, name, 0, 0.0, 0.0, "Error: Option does not exist.");
+            // it doesn't matter which ActionType is it beacuse it doesn't exist
+            return new TradeResult(request.getOrderId(),false, name, type,0, 0.0, 0.0, "Error: Option does not exist.");
         }
 
         // Route the order safely (because we know 'name' exists!)
@@ -325,7 +333,7 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
         // simply returns feedback if the order was received and handled ok,
         // the UI and Controller will read the orders from the tradeHistory.
         // I am doing it because of the TradeRequest interface and LMSR trading method.
-        return new TradeResult(true, name, 0, 0.0, 0.0, "Order accepted and routed.");
+        return new TradeResult(request.getOrderId(),true, name, type, 0, 0.0, 0.0, "Order accepted and routed.");
     }
 
     @Override

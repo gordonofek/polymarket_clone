@@ -84,11 +84,11 @@ public class MarketEvent implements Event, Serializable {
     @Override
     public TradeResult processTrade(TradeRequest request) {
         if (this.status != EventStatus.OPEN) {
-            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Event is not active");
+            return new TradeResult(request.getOrderId(),false, request.getOptionName(), request.getAction(),0, 0, 0, "Event is not active");
         }
         if (!this.options.contains(request.getOptionName()))
         {
-            return new TradeResult(false, request.getOptionName(), 0, 0, 0, "Unknown option: "+request.getOptionName());
+            return new TradeResult(request.getOrderId(),false, request.getOptionName(), request.getAction(),0, 0, 0, "Unknown option: "+request.getOptionName());
         }
         return this.tradingMethod.executeOrder(request);
     }
