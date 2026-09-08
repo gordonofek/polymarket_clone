@@ -28,4 +28,6 @@ public class GMOrderBook {
 
     public String getAllowMint() { return allowMint; }
     public void setAllowMint(String value) { this.allowMint = value; }
+
+
 }

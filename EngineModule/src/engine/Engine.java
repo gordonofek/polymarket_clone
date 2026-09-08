@@ -23,15 +23,18 @@ public class Engine implements EngineInterface {
     public void loadDataFromXML(String filePath) throws Exception {
         // creates a new XML_loader obj, and then load XML from filePath
         XMLDataLoader loader = new XMLDataLoader();
-        List<Event> loadedEvents = loader.loadEventsFromXML(filePath);
+        ParsedData data = loader.loadData(filePath);
 
         // auto opens all the events.
-        for (Event event : loadedEvents) {
+        for (Event event : data.events()) {
             event.openEvent();
         }
 
         eventManager.clearEvents();
-        eventManager.addEventList(loadedEvents);
+        eventManager.addEventList(data.events());
+
+        userManager.clearUsers();
+        userManager.addUserList(data.users());
     }
 
     @Override
