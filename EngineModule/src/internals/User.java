@@ -23,6 +23,12 @@ public class User {
         this.portfolio = new HashMap<>();
     }
 
+    public User(String name, double balance, Set<Integer> managedEvents) {
+        this.name = name;
+        this.balance = balance;
+        this.managedEvents = managedEvents;
+    }
+
     public String getName() {return name;}
     public double getBalance() {return balance;}
     public Map<Integer, Map<String, Integer>> getPortfolio() {return this.portfolio;}
@@ -54,5 +60,9 @@ public class User {
 
     public boolean isBlocked() {
         return this.isBlocked;
+    }
+
+    public Set<Integer> getManagedEvents() {
+        return managedEvents;
     }
 }

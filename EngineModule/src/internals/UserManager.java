@@ -3,6 +3,7 @@ package internals;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class UserManager implements Serializable {
@@ -18,6 +19,14 @@ public class UserManager implements Serializable {
             throw new IllegalArgumentException("User with the name " + user.getName() + " already exists.");
         }
         this.userRegistry.put(user.getName(), user);
+    }
+
+    // adds a list of events to registry
+    public void addUserList(List<User> list)
+    {
+        for(User user : list){
+            addUser(user);
+        }
     }
 
     public User getUser(String name) {
