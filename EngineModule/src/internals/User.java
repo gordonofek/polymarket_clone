@@ -27,6 +27,7 @@ public class User {
         this.name = name;
         this.balance = balance;
         this.managedEvents = managedEvents;
+        this.portfolio = new HashMap<>();
     }
 
     public String getName() {return name;}

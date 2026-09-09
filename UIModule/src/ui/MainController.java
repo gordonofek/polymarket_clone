@@ -24,6 +24,7 @@ import javafx.util.Duration;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
@@ -37,6 +38,13 @@ public class MainController {
     @FXML private Button loadFileBtn;
     @FXML private TextField filePathField;
     @FXML ProgressBar progressBar;
+
+    // Active user - events
+    @FXML private Label userNameLabelEvents;
+    @FXML private Label userBalanceLabelEvents;
+
+    // Tab
+    @FXML private Tab usersTab;
 
     // Filters
     @FXML private TextField searchField;
@@ -60,7 +68,8 @@ public class MainController {
     @FXML private Label detailDescLabel;
     @FXML private Label detailCommLabel;
     @FXML private VBox optionsContainer;
-    @FXML private ListView<Label> participationsListView;
+    @FXML private ListView<Label> participationsHistoryListView;
+    @FXML private ListView<Label> eventparticipationsListView;
 
     @FXML private LineChart<Number, Number> priceHistoryChart;
 
@@ -89,6 +98,35 @@ public class MainController {
 
     @FXML
     public void initialize() {
+
+        // users
+        userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
+        userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
+        userBalanceCol.setCellFactory(column -> new TableCell<UserSummaryDTO, Number>() {
+            @Override
+            protected  void updateItem(Number balance, boolean empty) {
+                super.updateItem(balance, empty);
+                if (empty || balance == null) {
+                    setText(null);
+                }
+                else {
+                    setText(String.format("%.2f", balance.doubleValue()));
+                }
+            }
+        });
+        // users - portfolio
+        portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
+        portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
+        portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
+
+        if (usersTab != null) {
+            usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+                if (isNowSelected) {
+                    refreshUsersTab();
+                }
+            });
+        }
+
         // listener
         searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
         methodFilter.setOnAction(e -> updateEventList());
@@ -119,6 +157,9 @@ public class MainController {
     {
         this.allEvents = events;
         updateEventList();
+
+        List<UserSummaryDTO> users = engine.getAllUsers();
+        usersTableView.getItems().setAll(users);
     }
 
     public void updateEventList()
@@ -333,9 +374,10 @@ public class MainController {
 
         optionsContainer.getChildren().clear();
 
-        EventDetailsDTO details = engine.getEventState(eventSummary.id());
+        EventDetailsDTO historyDetails = engine.getEventState(eventSummary.id());
+        List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.id());
 
-        for (OptionDetailsDTO option : details.options()) {
+        for (OptionDetailsDTO option : historyDetails.options()) {
             double price = option.currentPrice();
             String optionName = option.optionName();
             double percentage = price * 100;
@@ -381,11 +423,12 @@ public class MainController {
             optionsContainer.getChildren().add(row);
         }
 
-        participationsListView.getItems().clear();
-        List<TradeRecordDTO> history = details.tradeHistory();
+        // trade history of the event
+        participationsHistoryListView.getItems().clear();
+        List<TradeRecordDTO> history = historyDetails.tradeHistory();
         if(history.isEmpty()) {
             Label emptyLbl = new Label("No trades recorded yet for this event. :C");
-            participationsListView.getItems().add(emptyLbl);
+            participationsHistoryListView.getItems().add(emptyLbl);
         }
         else {
             for (TradeRecordDTO trade : history)
@@ -405,19 +448,43 @@ public class MainController {
                 else {
                     tradeLabel.getStyleClass().add("history-sell");
                 }
-                participationsListView.getItems().add(tradeLabel);
+                participationsHistoryListView.getItems().add(tradeLabel);
             }
         }
-        updatePriceGraph(details);
+
+        // users participating in the event
+        eventparticipationsListView.getItems().clear();
+        if(participantsDetails.isEmpty()) {
+            Label emptyParticipantsLbl = new Label("No Users have taken part in this event. :C");
+            eventparticipationsListView.getItems().add(emptyParticipantsLbl);
+        }
+        else {
+            for (ParticipantHoldingDTO participant : participantsDetails) {
+                String username = participant.username();
+                for (Map.Entry<String, Integer> holding : participant.shares().entrySet()) {
+                    String optionName = holding.getKey();
+                    int shareCount = holding.getValue();
+                    if (shareCount > 0 ) {
+                        String text = String.format("User: %s | Option '%s' | Shares: %d", username, optionName, shareCount);
+                        Label holdingLabel = new Label(text);
+                        holdingLabel.getStyleClass().add("holding-label");
+                        eventparticipationsListView.getItems().add(holdingLabel);
+                    }
+                }
+            }
+        }
+        updatePriceGraph(historyDetails);
     }
 
     private void handleBuyAction(EventSummaryDTO event, String optionName) {
         boolean isOrderBook = event.tradingMethodType().toUpperCase().contains("ORDER_BOOK");
         showTradeDialog(event, optionName, ActionType.BUY, isOrderBook);
+        updateBalance(activeUsername);
     }
 
     private void handleSellAction(EventSummaryDTO event, String optionName) {
         showTradeDialog(event, optionName, ActionType.SELL, true);
+        updateBalance(activeUsername);
     }
 
     private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
@@ -541,6 +608,11 @@ public class MainController {
         }
     }
 
+    private void updateBalance(String activeUsername) {
+        UserDetailsDTO details = engine.getUserDetails(activeUsername);
+        userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
+    }
+
     private void loadUserDetails(UserSummaryDTO user)
     {
         UserDetailsDTO details = engine.getUserDetails(user.name());
@@ -550,7 +622,26 @@ public class MainController {
         userEventOptionsBox.getChildren().clear();
         userEventTitleLabel.setText("Select an event from the portfolio to view it's current state");
 
+        userNameLabelEvents.setText(details.name());
+        userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
+
         portfolioTableView.getItems().addAll(details.portfolio());
+        activeUsername = details.name();
+    }
+
+    private void refreshUsersTab() {
+        List<UserSummaryDTO> updatedUsers = engine.getAllUsers();
+        usersTableView.getItems().setAll(updatedUsers);
+        if(this.activeUsername != null) {
+            for (UserSummaryDTO user : updatedUsers) {
+                if (user.name().equals(this.activeUsername)) {
+                    // reselect the user in the table
+                    usersTableView.getSelectionModel().select(user);
+                    loadUserDetails(user);
+                    break;
+                }
+            }
+        }
     }
 
 }

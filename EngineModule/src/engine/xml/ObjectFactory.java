@@ -43,13 +43,13 @@ public class ObjectFactory {
     }
 
     /**
-     * Create an instance of {@link Comision }
+     * Create an instance of {@link Commission }
      * 
      * @return
-     *     the new instance of {@link Comision }
+     *     the new instance of {@link Commission }
      */
-    public Comision createComision() {
-        return new Comision();
+    public Commission createCommission() {
+        return new Commission();
     }
 
     /**

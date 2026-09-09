@@ -17,6 +17,7 @@ public class MarketEvent implements Event, Serializable {
     protected EventStatus status;
     protected TradingMethods tradingMethod;
 
+    // username -> (optionName -> amount of shares)
     protected Map<String, Map<String, Integer>> participantsHoldings = new HashMap<>();
 
     public MarketEvent(int id, String name, String description, int commissionPercent,
@@ -109,6 +110,12 @@ public class MarketEvent implements Event, Serializable {
     @Override
     public TradingMethodType getEventTradingMethodType() {
         return this.tradingMethod.getTradingMethodType();
+    }
+
+    @Override
+    public Map<String, Map<String, Integer>> getParticipantsHoldings()
+    {
+        return this.participantsHoldings;
     }
 
     @Override

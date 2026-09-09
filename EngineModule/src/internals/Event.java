@@ -1,6 +1,7 @@
 package internals;
 
 import java.util.List;
+import java.util.Map;
 
 public interface Event {
 
@@ -39,6 +40,9 @@ public interface Event {
 
     // gets the type of the trading method in the event
     TradingMethodType getEventTradingMethodType();
+
+    // gets the map of users and the amount of shares they have for each option
+    Map<String, Map<String, Integer>> getParticipantsHoldings();
 
     // record the participants in the event (those who hold shares for some option in the event)
     void recordParticipant(String username, String optionName, int amount);

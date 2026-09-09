@@ -84,7 +84,7 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
         }
 
         // בדיקת עמלה בין 0 ל-90
-        int commission = xmlEvent.getComision().getValue();
+        int commission = xmlEvent.getCommission().getValue();
         if (commission < 0 || commission > 90) {
             throw new InvalidXMLException("Invalid commission for event '" + fullEventName + "'. Must be between 0 and 90.");
         }
@@ -97,7 +97,7 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
             optionsMap.put(optionName, 0);
         }
 
-        String typeStr = xmlEvent.getComision().getType();
+        String typeStr = xmlEvent.getCommission().getType();
         CommissionType commissionType;
         switch (typeStr.toLowerCase()) {
             case "on-purchase":
