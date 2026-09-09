@@ -47,9 +47,19 @@ public interface EngineInterface {
     UserDetailsDTO getUserDetails(String username);
 
     /**
+     *  returns the participants information for a specific event
+     */
+    List<ParticipantHoldingDTO> getEventParticipants(int eventId);
+
+    /**
      * returns all the users
      */
     List<UserSummaryDTO> getAllUsers();
+
+    /**
+     *  checks if the user is the market maker for this event
+     */
+    boolean isUserMarketMaker(String username, int eventId);
 
     // ==========================================
     // ביצוע פעולות (Commands)

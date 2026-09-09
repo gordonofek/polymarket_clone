@@ -5,6 +5,7 @@ import engine.dto.*;
 import engine.files.FileHandler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -158,6 +159,23 @@ public class Engine implements EngineInterface {
     }
 
     @Override
+    public List<ParticipantHoldingDTO> getEventParticipants(int eventId)
+    {
+        Event event = eventManager.getEvent(eventId);
+        Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
+
+        List<ParticipantHoldingDTO> holdings = ledger.entrySet().stream()
+                .map(entry -> {
+                    String participantName = entry.getKey();
+                    Map<String, Integer> shares = new HashMap<>(entry.getValue());
+                    return new ParticipantHoldingDTO(participantName, shares);
+                }
+        ).toList();
+
+        return holdings;
+    }
+
+    @Override
     public TradeReceiptDTO placeOrder(String username, int eventId, String optionName, int amount, ActionType action, double limitPrice) {
         Event event = eventManager.getEvent(eventId);
         User user = userManager.getUser(username);
@@ -223,28 +241,36 @@ public class Engine implements EngineInterface {
 
     public UserDetailsDTO getUserDetails(String username) {
         User user = this.userManager.getUser(username);
-        if (user == null)
-        {
+        if (user == null) {
             throw new IllegalArgumentException("User" + username + " not found");
         }
-        List<PortfolioItemDTO> portfolio =  new ArrayList<>();
-        for (Map.Entry<Integer, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
-            int eventId = eventEntry.getKey();
+        List<PortfolioItemDTO> portfolio = new ArrayList<>();
+        if (user.getPortfolio() != null) {
+            for (Map.Entry<Integer, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
+                int eventId = eventEntry.getKey();
 
-            Event event = this.eventManager.getEvent(eventId);
-            String eventName = (event != null) ? event.getName() : "Unknown Event";
+                Event event = this.eventManager.getEvent(eventId);
+                String eventName = (event != null) ? event.getName() : "Unknown Event";
 
-            for (Map.Entry<String, Integer> optionEntry : eventEntry.getValue().entrySet()) {
-                String optionName = optionEntry.getKey();
-                int shares = optionEntry.getValue();
+                for (Map.Entry<String, Integer> optionEntry : eventEntry.getValue().entrySet()) {
+                    String optionName = optionEntry.getKey();
+                    int shares = optionEntry.getValue();
 
-                // Only add to the UI if they actually own shares (amount > 0)
-                if (shares > 0) {
-                    portfolio.add(new PortfolioItemDTO(eventName, optionName, shares));
+                    // Only add to the UI if they actually own shares (amount > 0)
+                    if (shares > 0) {
+                        portfolio.add(new PortfolioItemDTO(eventName, optionName, shares));
+                    }
                 }
             }
         }
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
+    }
+
+    @Override
+    public boolean isUserMarketMaker(String username, int eventId) {
+        if (username == null) return false;
+        User user = this.userManager.getUser(username);
+        return user != null && user.isMarketMakerFor(eventId); // Using the method you already wrote!
     }
 
     @Override
