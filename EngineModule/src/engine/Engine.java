@@ -26,11 +26,6 @@ public class Engine implements EngineInterface {
         XMLDataLoader loader = new XMLDataLoader();
         ParsedData data = loader.loadData(filePath);
 
-        // auto opens all the events.
-        for (Event event : data.events()) {
-            event.openEvent();
-        }
-
         eventManager.clearEvents();
         eventManager.addEventList(data.events());
 
@@ -202,15 +197,80 @@ public class Engine implements EngineInterface {
     }
 
     @Override
+    public TradeReceiptDTO startEvent(String username, int eventId) {
+        Event event = eventManager.getEvent(eventId);
+        User user = userManager.getUser(username);
+
+        if (event.getStatus() != EventStatus.NOT_STARTED) {
+            return new TradeReceiptDTO(false, "Event is already active.",0,0);
+        }
+        double cost = 0;
+        int sharesToGive = 0;
+
+        TradingMethods method = event.getTradingMethod();
+        if(method instanceof OrderBookTradingMethod ob) {
+            cost = ob.getInitialInvestment();
+            sharesToGive = (int) (cost / ob.getBaseValue());
+        }
+        // LMSR
+        else {
+            cost = method.getPoolValue();
+        }
+
+        if (user.getBalance() < cost) {
+            return new TradeReceiptDTO(false, String.format("Insufficient funds! You need $%.2f to start the event.", cost),0 ,0);
+        }
+        // deducting funds and opening the event
+        user.deductFunds(cost);
+        event.openEvent();
+
+        // granting the market maker the initial order book shares for EVERY option
+        if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
+            for (String optionName : event.getOptions()) {
+                user.addShares(eventId, optionName, sharesToGive);
+                event.recordParticipant(username, optionName, sharesToGive);
+            }
+        }
+        return new TradeReceiptDTO(true, "Event started successfully!", cost, 0);
+    }
+
+    @Override
     public CloseEventReceiptDTO closeEvent(int eventId, String winningOption) {
         try {
-            // 1. שולפים את האירוע מהמערכת
+            // fetch the event
             Event event = eventManager.getEvent(eventId);
 
-            // 2. סוגרים את האירוע ומקבלים את תוצאות החישוב
+            // close the event and get the results
             CloseMarketResult res = event.resolveEvent(winningOption);
 
-            // 3. אם הגענו לכאן בלי שגיאות, הסגירה הצליחה! נחזיר קבלה חיובית מלאה בנתונים
+            // pay the market maker their commission + leftover subsidy
+            String mmName = event.getMarketMaker();
+            User marketMaker = userManager.getUser(mmName);
+            if (marketMaker != null) {
+                marketMaker.addFunds(res.commissionTaken() + res.leftoverSubsidy());
+            }
+
+            // pay the winners
+            // calculates how much each winning share is worth after commission
+            int totalWinningShares = event.getOptionShares(winningOption);
+            double payoutPerShare = totalWinningShares > 0 ? (res.totalPayout() / totalWinningShares) : 0.0;
+
+            // loop through the event ledger to find who holds the winning option
+            Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
+            for (Map.Entry<String, Map<String, Integer>> entry : ledger.entrySet()) {
+                String username = entry.getKey();
+                int userWinningShares = entry.getValue().getOrDefault(winningOption, 0);
+
+                if (userWinningShares > 0) {
+                    User winner = userManager.getUser(username);
+                    if (winner != null) {
+                        winner.addFunds(userWinningShares * payoutPerShare);
+                    }
+                }
+            }
+
+
+            // returns the successful receipt
             return new CloseEventReceiptDTO(
                     true,
                     "Event closed successfully",
@@ -221,10 +281,9 @@ public class Engine implements EngineInterface {
             );
 
         } catch (IllegalStateException e) {
-            // במקרה שהאירוע לא היה פתוח (וכבר נסגר או טרם התחיל), נחזיר קבלה עם הודעת שגיאה
             return new CloseEventReceiptDTO(
                     false,
-                    e.getMessage(), // מחזיר את ההודעה מתוך ה-Exception שיצרת ב-MarketEvent
+                    e.getMessage(),
                     null,
                     0,
                     0,
@@ -264,6 +323,32 @@ public class Engine implements EngineInterface {
             }
         }
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
+    }
+
+    @Override
+    public UserEventOverviewDTO getUserEventOverview(String username, int eventId) {
+        User user = userManager.getUser(username);
+        Event event = eventManager.getEvent(eventId);
+
+        double commission = user.getCommissionPaidForEvent(eventId);
+        double payout = user.getPayoutForEvent(eventId);
+
+        // calculates total investment for this event
+        double totalInvestment = 0.0;
+        Map<String, Double> investments = user.getOptionInvestments().getOrDefault(eventId, new java.util.HashMap<>());
+        for (double amount : investments.values()) {
+            totalInvestment += amount;
+        }
+
+        // calculates profit/loss (Payout received minus total money spent)
+        double profitLoss = payout - totalInvestment;
+
+        // find the winner if closed
+        String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
+
+        List<TradeRecordDTO> history = new java.util.ArrayList<>();
+
+        return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner);
     }
 
     @Override

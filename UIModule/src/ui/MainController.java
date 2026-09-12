@@ -73,6 +73,9 @@ public class MainController {
 
     @FXML private LineChart<Number, Number> priceHistoryChart;
 
+    @FXML private HBox mmControlsBox;
+    @FXML private Button startEventBtn;
+    @FXML private Button closeEventBtn;
 
     // users list
     @FXML private TableView<UserSummaryDTO> usersTableView;
@@ -248,6 +251,20 @@ public class MainController {
         HBox commBox = new HBox(6, commTitle, commVal);
         commBox.setAlignment(Pos.BOTTOM_LEFT);
         commBox.setPadding(new Insets(10, 0, 0, 0));
+
+        portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                // Find the event in allEvents
+                EventSummaryDTO selectedPortfolioEvent = allEvents.stream()
+                        .filter(e -> e.name().equals(newSelection.eventName()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (selectedPortfolioEvent != null) {
+                    populateUserEventOverview(selectedPortfolioEvent, activeUsername);
+                }
+            }
+        });
 
         // add to grid
         tile.add(topLeftBox, 0, 0);
@@ -474,6 +491,79 @@ public class MainController {
             }
         }
         updatePriceGraph(historyDetails);
+
+        boolean isMarketMaker = engine.isUserMarketMaker(activeUsername, eventSummary.id());
+        String status = eventSummary.status();
+        mmControlsBox.setVisible(isMarketMaker);
+        mmControlsBox.setManaged(isMarketMaker);
+
+        boolean canStat = isMarketMaker && status.equals("NOT_STARTED");
+        startEventBtn.setVisible(canStat);
+        startEventBtn.setManaged(canStat);
+
+        boolean canClose = isMarketMaker && status.equals("OPEN");
+        closeEventBtn.setVisible(canClose);
+        closeEventBtn.setManaged(canClose);
+    }
+
+    @FXML
+    private void handleStartEventAction() {
+        if (selectedEvent == null || activeUsername == null) return;
+
+        TradeReceiptDTO receipt = engine.startEvent(activeUsername, selectedEvent.id());
+
+        if (receipt.isSuccess()) {
+            showAlert(Alert.AlertType.INFORMATION, "Event Started", String.format("Event successfully opened!\nCost deducted: $%.2f", receipt.totalCost()));
+
+            updateEvents();
+        }
+        else {
+            showAlert(Alert.AlertType.ERROR, "Cannot start the event", receipt.message());
+        }
+    }
+
+    @FXML
+    private void handleCloseEventAction() {
+        if (selectedEvent == null || activeUsername == null) return;
+
+        EventDetailsDTO details = engine.getEventState(selectedEvent.id());
+        List<String> optionNames = new ArrayList<>();
+        for (OptionDetailsDTO option : details.options()) {
+            optionNames.add(option.optionName());
+        }
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(optionNames.get(0), optionNames);
+        dialog.setTitle("Close Event");
+        dialog.setHeaderText("Closing: " + selectedEvent.name());
+        dialog.setContentText("Select the winning option:");
+
+        dialog.showAndWait().ifPresent(winningOption -> {
+            CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.id(), winningOption);
+
+            if (receipt.isSuccess()) {
+                String msg = String.format("Event Closed!\nWinner: %s\nTotal Payout: $%.2f\nCommission Taken: $%.2f\nReturned to MM: $%.2f",
+                        receipt.winningOption(), receipt.totalPayout(), receipt.commissionTaken(), receipt.leftoverPool());
+                showAlert(Alert.AlertType.INFORMATION, "Event Closed", msg);
+
+                updateEvents();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Error Closing Event", receipt.message());
+            }
+        });
+    }
+
+    private void updateEvents()
+    {
+        this.allEvents = engine.getAllEvents();
+        for (EventSummaryDTO event : this.allEvents) {
+            if (event.id() == selectedEvent.id()) {
+                this.selectedEvent = event;
+                break;
+            }
+        }
+        updateEventList();
+        updateBalance(activeUsername);
+        handleTileClick(selectedEvent);
     }
 
     private void handleBuyAction(EventSummaryDTO event, String optionName) {
@@ -642,6 +732,56 @@ public class MainController {
                 }
             }
         }
+    }
+
+    private void populateUserEventOverview(EventSummaryDTO event, String username) {
+        userEventTitleLabel.setText("Overview for: " + event.name());
+        userEventOptionsBox.getChildren().clear();
+
+        boolean isOrderBook = event.tradingMethodType().contains("ORDER_BOOK");
+        boolean isClosed = event.status().equals("CLOSED");
+
+        // Fetch the compiled data from the Engine!
+        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.id());
+
+        VBox contentBox = new VBox(10);
+
+        Label commLabel = new Label(String.format("Total Commission Paid: $%.2f", overview.totalCommissionPaid()));
+        commLabel.getStyleClass().add("overview-comm-label");
+        contentBox.getChildren().add(commLabel);
+
+        if (isOrderBook) {
+            Label obLabel = new Label("Order Book Holdings & Costs:");
+            obLabel.getStyleClass().add("overview-header-label");
+            contentBox.getChildren().add(obLabel);
+
+            // Loop through options and display Total Paid
+            for (Map.Entry<String, Double> entry : overview.optionInvestments().entrySet()) {
+                Label optLabel = new Label(String.format("• %s: Spent $%.2f", entry.getKey(), entry.getValue()));
+                contentBox.getChildren().add(optLabel);
+            }
+
+            if (isClosed) {
+                Label plLabel = new Label(String.format("Total Profit/Loss: $%.2f", overview.profitLoss()));
+                plLabel.getStyleClass().add("overview-pl-label");
+                contentBox.getChildren().add(plLabel);
+            }
+        } else {
+            Label lmsrLabel = new Label("LMSR Trade History:");
+            lmsrLabel.getStyleClass().add("overview-header-label");
+            contentBox.getChildren().add(lmsrLabel);
+
+            Label historyLabel = new Label("Trade history will sync once we update the backend TradeResult object.");
+            contentBox.getChildren().add(historyLabel);
+
+            if (isClosed) {
+                Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
+                winnerLabel.getStyleClass().add("overview-winner-label");
+                contentBox.getChildren().add(winnerLabel);
+            }
+        }
+
+        userEventOptionsBox.getChildren().add(contentBox);
     }
 
 }

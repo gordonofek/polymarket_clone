@@ -61,6 +61,9 @@ public interface EngineInterface {
      */
     boolean isUserMarketMaker(String username, int eventId);
 
+    // gets the user's event info for the overview
+    UserEventOverviewDTO getUserEventOverview(String username, int eventId);
+
     // ==========================================
     // ביצוע פעולות (Commands)
     // ==========================================
@@ -74,6 +77,13 @@ public interface EngineInterface {
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).
      */
     CloseEventReceiptDTO closeEvent(int eventId, String winningOption);
+
+    /**
+     * opens the event. checks the cost, market maker's balance, deducts the money and distributes the starting shares for Order Book events.
+     */
+    TradeReceiptDTO startEvent(String username, int eventId);
+
+
 
     // saves the current state of the program to bin file
     void saveState(String filePath);

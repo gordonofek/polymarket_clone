@@ -307,6 +307,10 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
         return poolValue;
     }
 
+    public int getInitialInvestment() {return this.initialInvestment;}
+
+    public int getBaseValue() {return this.baseValue;}
+
     @Override
     public TradeResult executeOrder(TradeRequest request)
     {

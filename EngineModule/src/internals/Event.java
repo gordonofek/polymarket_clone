@@ -44,6 +44,9 @@ public interface Event {
     // gets the map of users and the amount of shares they have for each option
     Map<String, Map<String, Integer>> getParticipantsHoldings();
 
+    void setMarketMaker(String username);
+    String getMarketMaker();
+
     // record the participants in the event (those who hold shares for some option in the event)
     void recordParticipant(String username, String optionName, int amount);
 

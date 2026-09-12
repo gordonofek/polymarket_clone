@@ -185,6 +185,15 @@
                                           <Label fx:id="detailCommLabel" styleClass="comm-val-label" text="N/A" />
                                        </children>
                                     </HBox>
+                                    <HBox fx:id="mmControlsBox" spacing="10.0" visible="false" managed="false">
+                                       <padding>
+                                          <Insets top="5.0" />
+                                       </padding>
+                                       <children>
+                                          <Button fx:id="startEventBtn" mnemonicParsing="false" onAction="#handleStartEventAction" styleClass="mm-start-btn" text="Start Event" managed="false" visible="false" />
+                                          <Button fx:id="closeEventBtn" mnemonicParsing="false" onAction="#handleCloseEventAction" styleClass="mm-close-btn" text="Close Event" managed="false" visible="false" />
+                                       </children>
+                                    </HBox>
                                  </children>
                               </VBox>
 
