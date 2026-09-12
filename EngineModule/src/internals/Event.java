@@ -56,8 +56,9 @@ public interface Event {
     */
     void openEvent();
 
-    // Delegates a buy or sell request to the right trading method and returns the trade result
-    TradeResult processTrade(TradeRequest request);
+    // Delegates a buy or sell request to the right trading method
+    // and return list of trade results that were processed
+    List<TradeResult> processTrade(TradeRequest request);
 
     // transitions the event from Open to Closed. Calculates the payouts.
     CloseMarketResult resolveEvent(String winningOption);

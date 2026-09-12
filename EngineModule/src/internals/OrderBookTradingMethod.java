@@ -113,8 +113,10 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
     }
 
     // helper function that execute trade order of optionName, it can be buy or sell.
-    private void matchOrders(String optionName ,ActionType incomingAction)
+    private List<TradeResult> matchOrders(String username,String optionName ,ActionType incomingAction)
     {
+        List<TradeResult> currentMatches = new ArrayList<>();
+
         while(!buy_requests.get(optionName).isEmpty() && !sell_requests.get(optionName).isEmpty())
         {
             Map.Entry<Double, Queue<TradeRequest>> bestBuyEntry =
@@ -177,27 +179,33 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             //calc commission(if there is ON_PURCHASE in this event) and creating TradeResult to add to tradeHistory
             double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
-            TradeResult trade1 = new TradeResult(buy_request.getOrderId(),true, optionName,
+            TradeResult trade1 = new TradeResult(buy_request.getOrderId(), username,true, optionName,
                     ActionType.BUY, tradedShares, totalTransactionCost,
                     commission, "Bought successfully");
 
-            TradeResult trade2 = new TradeResult(sell_request.getOrderId(),true, optionName,
+            TradeResult trade2 = new TradeResult(sell_request.getOrderId(), username,true, optionName,
                     ActionType.SELL, tradedShares, totalTransactionCost,
                     0.0, "Sold successfully");
+
+            currentMatches.add(trade1);
+            currentMatches.add(trade2);
 
             this.tradeHistory.add(trade1);
             this.tradeHistory.add(trade2);
         }
+        return currentMatches;
     }
 
     // Checks if allowMint is true and looks across all options
     // (YES and NO or multichoice) to see if combined bids >= baseValue.
     // If so, it creates new shares and updates poolValue
-    private void attemptMint(String incomingOptionName)
+    private List<TradeResult> attemptMint(String username,String incomingOptionName)
     {
+        List<TradeResult> currentMatches = new ArrayList<>();
+
         // Check if the event even allows minting
         if (!this.allowMint) {
-            return;
+            return null;
         }
 
         // The "Infinite" Loop - keeps running as long as minting is possible
@@ -219,7 +227,7 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 // If even ONE option is empty, we cannot buy every option.
                 // We must stop the entire minting process.
                 if (map.isEmpty()) {
-                    return;
+                    return null;
                 }
                 // Add the highest bid of this option to our total sum
                 sum += map.firstKey();
@@ -274,7 +282,11 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
                 // 4. Create the receipt and add it to the history
-                TradeResult trade = new TradeResult(topBuyer.getOrderId(),true, optionName, ActionType.BUY, minShares, totalTransactionCost, commission, "Mint successful");
+                TradeResult trade = new TradeResult(topBuyer.getOrderId(), username,true,
+                        optionName, ActionType.BUY, minShares, totalTransactionCost, commission,
+                        "Mint successful");
+
+                currentMatches.add(trade);
                 this.tradeHistory.add(trade);
 
                 // Clean up: If this buyer got all their shares, remove them safely
@@ -295,6 +307,7 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             // add to the counter of mintedSets
             this.totalMintedSets += minShares;
         }
+        return currentMatches;
     }
 
     @Override
@@ -312,18 +325,25 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
     public int getBaseValue() {return this.baseValue;}
 
     @Override
-    public TradeResult executeOrder(TradeRequest request)
+    public List<TradeResult> executeOrder(TradeRequest request)
     {
         // get the attributes of the request
         String id = request.getOrderId();
         ActionType type = request.getAction();
         String name = request.getOptionName();
+        String username = request.getUsername();
         double price = request.getLimitPrice();
+
+        List<TradeResult> allExecutedTrades = new ArrayList<>();
 
         // Validation Check: Does this option actually exist in our market?
         if (!buy_requests.containsKey(name)) {
-            // it doesn't matter which ActionType is it beacuse it doesn't exist
-            return new TradeResult(request.getOrderId(),false, name, type,0, 0.0, 0.0, "Error: Option does not exist.");
+            // מחזירים רשימה שמכילה את התוצאה הבודדת של השגיאה
+            TradeResult errorResult = new TradeResult(request.getOrderId(),
+                    username, false, name, type, 0, 0.0,
+                    0.0, "Error: Option does not exist.");
+            allExecutedTrades.add(errorResult);
+            return allExecutedTrades;
         }
 
         // Route the order safely (because we know 'name' exists!)
@@ -334,16 +354,24 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             buy_requests.get(name).computeIfAbsent(price, k -> new LinkedList<>()).add(request);
         }
 
-        // Triggers the helper functions matchOrders and attemptMint to handle the new request
-        matchOrders(name, type);
+        allExecutedTrades.addAll(matchOrders(username, name, type));
         if (this.allowMint) {
-            attemptMint(name);
+            // בגלל ש-attemptMint יכולה להחזיר null, צריך לבדוק לפני שמוסיפים
+            List<TradeResult> mintResults = attemptMint(username, name);
+            if (mintResults != null) {
+                allExecutedTrades.addAll(mintResults);
+            }
         }
 
-        // simply returns feedback if the order was received and handled ok,
-        // the UI and Controller will read the orders from the tradeHistory.
-        // I am doing it because of the TradeRequest interface and LMSR trading method.
-        return new TradeResult(request.getOrderId(),true, name, type, 0, 0.0, 0.0, "Order accepted and routed.");
+        // אם לא הייתה שום עסקה (הרשימה ריקה), נייצר הודעת המתנה
+        if (allExecutedTrades.isEmpty()) {
+            allExecutedTrades.add(new TradeResult(request.getOrderId(),
+                    username, true, name, type, 0,
+                    0.0, 0.0,
+                    "Order accepted and waiting in book."));
+        }
+
+        return allExecutedTrades;
     }
 
     @Override

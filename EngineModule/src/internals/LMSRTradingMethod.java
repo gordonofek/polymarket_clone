@@ -63,17 +63,17 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
     }
 
     @Override
-    public TradeResult executeOrder(TradeRequest request) {
-        // 1. חסימת מכירה
+    public List<TradeResult> executeOrder(TradeRequest request) {
+        // 1. חסימת מכירה - מחזירים רשימה עם שגיאה
         if (request.getAction() != ActionType.BUY) {
-            return new TradeResult(request.getOrderId(),false, request.getOptionName(), ActionType.SELL, 0, 0, 0, "Selling is not supported in LMSR");
+            return List.of(new TradeResult(request.getOrderId(), request.getUsername(),false, request.getOptionName(), ActionType.SELL, 0, 0, 0, "Selling is not supported in LMSR"));
         }
 
         String option = request.getOptionName();
 
-        // 2. בדיקה שהאופציה בכלל קיימת באירוע
+        // 2. בדיקה שהאופציה בכלל קיימת באירוע - מחזירים רשימה עם שגיאה
         if (!this.optionShares.containsKey(option)) {
-            return new TradeResult(request.getOrderId(),false, option, ActionType.BUY, 0, 0, 0, "Option does not exist");
+            return List.of(new TradeResult(request.getOrderId(), request.getUsername(),false, option, ActionType.BUY, 0, 0, 0, "Option does not exist"));
         }
 
         // 3. חישוב עלות הקנייה ה"נקייה" (באמצעות מפה מדומה)
@@ -81,7 +81,7 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
 
         Map<String, Integer> simulatedMap = new HashMap<>(this.optionShares);
         simulatedMap.put(option, simulatedMap.get(option) + request.getAmount());
-        double poolAfter = calculateCost(simulatedMap); // שימוש בפונקציית העזר שלך!
+        double poolAfter = calculateCost(simulatedMap);
 
         double rawCost = poolAfter - poolBefore;
 
@@ -93,10 +93,14 @@ public class LMSRTradingMethod implements TradingMethods, Serializable {
         // 5. עדכון המפה האמיתית
         this.optionShares.put(option, this.optionShares.get(option) + request.getAmount());
 
-        TradeResult finalReceipt = new TradeResult(request.getOrderId(),true, option, ActionType.BUY, request.getAmount(), finalCost,
-                commission, "Trade successful");
+        TradeResult finalReceipt = new TradeResult(request.getOrderId(), request.getUsername(),
+                true, option, ActionType.BUY, request.getAmount(), finalCost, commission,
+                "Trade successful");
+
         this.tradeHistory.add(finalReceipt);
-        return finalReceipt;
+
+        // 6. מחזירים רשימה שמכילה את הקבלה הבודדת!
+        return List.of(finalReceipt);
     }
 
     @Override

@@ -142,7 +142,6 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
                 optionsList,
                 tradingMethod // מעבירים את הממשק הכללי שיצרנו!
         );
-
         engineEvents.add(newEvent);
     }
     return engineEvents;
