@@ -9,8 +9,8 @@ public interface TradingMethods {
     // calc and gets the amount of money invested into the event
     double getPoolValue();
 
-    // execute a trade order of the user on the event
-    TradeResult executeOrder(TradeRequest request);
+    // execute a trade order of the user on the event, and return list of executed orders
+    List<TradeResult> executeOrder(TradeRequest request);
 
     // calc the commission participants owe the Market Maker
     double calculateCommission(double baseAmount, CommissionType currentPhase);
