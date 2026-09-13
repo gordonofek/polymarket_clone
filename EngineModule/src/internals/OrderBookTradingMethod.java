@@ -227,7 +227,9 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 // If even ONE option is empty, we cannot buy every option.
                 // We must stop the entire minting process.
                 if (map.isEmpty()) {
-                    return null;
+                    // no buy request to run so don't add anything
+                    // and just return the currentMatches we have so far
+                    return currentMatches;
                 }
                 // Add the highest bid of this option to our total sum
                 sum += map.firstKey();
