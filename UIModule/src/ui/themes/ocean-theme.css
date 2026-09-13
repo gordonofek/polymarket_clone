@@ -328,14 +328,25 @@
     -fx-border-color: #475569;
 }
 
-.modern-filter .list-view {
+.modern-filter > .list-cell {
+    -fx-text-fill: #e2e8f0;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view {
     -fx-background-color: #1e293b;
     -fx-border-color: #334155;
-    -fx-border-radius: 0 0 6 6;
 }
-.modern-filter .list-cell {
+.combo-box-popup .list-cell {
+    -fx-background-color: #1e293b;
     -fx-text-fill: #e2e8f0;
 }
+.combo-box-popup .list-cell:filled:hover,
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #334155;
+    -fx-text-fill: #38bdf8;
+}
+
 .modern-filter .list-cell:hover {
     -fx-background-color: #334155;
 }
@@ -416,3 +427,11 @@
     -fx-text-fill: #cbd5e1;
     -fx-font-size: 14px;
 }
+
+/* =========================================
+   CUSTOM DIALOGS & ALERTS
+========================================= */
+.modern-dialog { -fx-background-color: #112236; -fx-border-color: #1e3a5f; -fx-border-width: 1px; }
+.modern-dialog > .content.label { -fx-text-fill: #e2e8f0; -fx-font-size: 14px; -fx-padding: 10px; }
+.modern-dialog .header-panel { -fx-background-color: #0b192c; }
+.modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #38bdf8; }

@@ -320,6 +320,8 @@ public class Engine implements EngineInterface {
             int totalWinningShares = event.getOptionShares(winningOption);
             double payoutPerShare = totalWinningShares > 0 ? (res.netPayoutToWinners() / totalWinningShares) : 0.0;
 
+            double commissionPerShare = totalWinningShares > 0 ? (res.commissionTaken() / totalWinningShares) : 0.0;
+
             // loop through the event ledger to find who holds the winning option
             Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
             for (Map.Entry<String, Map<String, Integer>> entry : ledger.entrySet()) {
@@ -330,8 +332,10 @@ public class Engine implements EngineInterface {
                     User winner = userManager.getUser(username);
                     if (winner != null) {
                         double userPayout = userWinningShares * payoutPerShare;
+                        double userCommission = userWinningShares * commissionPerShare;
                         winner.addFunds(userPayout);
                         winner.addPayoutReceived(eventId, userPayout);
+                        winner.addCommissionPaid(eventId, userCommission);
                     }
                 }
             }

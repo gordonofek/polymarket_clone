@@ -397,6 +397,10 @@
     -fx-cell-size: 38px;
 }
 
+.table-row-cell .text {
+    -fx-fill: #333333;
+}
+
 /* Subtle zebra striping for alternate rows */
 .table-row-cell:odd {
     -fx-background-color: #fafbfc;
@@ -464,3 +468,11 @@
     -fx-border-color: #d2d6dc;
     -fx-border-radius: 0 0 6 6;
 }
+
+/* =========================================
+   CUSTOM DIALOGS & ALERTS
+========================================= */
+.modern-dialog { -fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-width: 1px; }
+.modern-dialog > .content.label { -fx-font-size: 14px; -fx-padding: 10px; }
+.modern-dialog .header-panel { -fx-background-color: #f8f9fa; }
+.modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2854b5; }

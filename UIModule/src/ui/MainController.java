@@ -519,6 +519,20 @@ public class MainController {
         closeEventBtn.setManaged(canClose);
     }
 
+    /** #####################################
+     *      Dialog Helped function
+     *  #####################################
+     */
+
+    private void styleDialog(Dialog<?> dialog) {
+        // Applying the current active theme to the popup
+        if (rootVBox != null && !rootVBox.getStylesheets().isEmpty()) {
+            dialog.getDialogPane().getStylesheets().addAll(rootVBox.getStylesheets());
+        }
+        // Adds a custom class so we can style the popup container
+        dialog.getDialogPane().getStyleClass().add("modern-dialog");
+    }
+
     @FXML
     private void handleStartEventAction() {
         if (selectedEvent == null || activeUsername == null) return;
@@ -549,6 +563,7 @@ public class MainController {
         dialog.setTitle("Close Event");
         dialog.setHeaderText("Closing: " + selectedEvent.name());
         dialog.setContentText("Select the winning option:");
+        styleDialog(dialog);
 
         dialog.showAndWait().ifPresent(winningOption -> {
             CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.id(), winningOption);
@@ -598,6 +613,7 @@ public class MainController {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(action.name() + " Shares - " + optionName);
         dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
+        styleDialog(dialog);
 
         // Set the button types
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -680,6 +696,7 @@ public class MainController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
+        styleDialog(alert);
         alert.showAndWait();
     }
 
