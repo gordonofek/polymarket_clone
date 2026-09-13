@@ -13,7 +13,7 @@ public class Main extends Application {
 
         Scene scene = new Scene(root);
 
-        scene.getStylesheets().add(getClass().getResource("/default-theme.css").toExternalForm());
+        scene.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
 
         primaryStage.setTitle("Guess Market");
         primaryStage.setScene(scene);

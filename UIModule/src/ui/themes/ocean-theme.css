@@ -1,0 +1,437 @@
+/* ocean-theme.css */
+
+/* =========================================
+   GLOBAL ROOT & PANEL CLASSES
+========================================= */
+.root {
+    -fx-background-color: #0b192c; /* Deep marine blue */
+}
+
+.transparent-scroll-pane {
+    -fx-background-color: transparent;
+}
+.transparent-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.card-panel {
+    -fx-background-color: #112236; /* Lighter navy panel */
+    -fx-border-color: #1e3a5f;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.borderless-list-view {
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+}
+.borderless-list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e2e8f0;
+}
+
+.users-bordered-pane {
+    -fx-border-color: #1e3a5f;
+}
+
+.user-balance-label {
+    -fx-border-color: #3b82f6;
+    -fx-background-color: transparent;
+    -fx-padding: 5 10 5 10;
+    -fx-text-fill: #ffffff;
+}
+
+/* =========================================
+   EVENTS TAB STYLING
+========================================= */
+.event-tile {
+    -fx-background-color: #112236;
+    -fx-border-color: #1e3a5f;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 15;
+    -fx-hgap: 10;
+    -fx-vgap: 8;
+}
+
+/* --- Method Badges --- */
+.method-badge {
+    -fx-background-radius: 4;
+    -fx-padding: 2 6 2 6;
+    -fx-font-size: 10px;
+}
+
+.label.method-lmsr {
+    -fx-background-color: #0c4a6e;
+    -fx-text-fill: #38bdf8; /* Sky blue */
+}
+
+.label.method-order_book {
+    -fx-background-color: #064e3b;
+    -fx-text-fill: #34d399; /* Sea green */
+}
+
+/* --- Status Badges --- */
+.label.status-badge {
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-background-radius: 10;
+    -fx-padding: 4 12 4 12;
+}
+
+.label.status-open {
+    -fx-background-color: #064e3b;
+    -fx-text-fill: #69f0ae;
+}
+
+.label.status-closed {
+    -fx-background-color: #7f1d1d;
+    -fx-text-fill: #fca5a5; /* Soft coral */
+}
+
+.label.status-not_started {
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #94a3b8;
+}
+
+/* --- Text & Buttons --- */
+.event-id-label { -fx-text-fill: #94a3b8; -fx-font-weight: bold; -fx-font-size: 12px; }
+.event-title-label { -fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #ffffff; }
+.event-desc-label { -fx-text-fill: #cbd5e1; }
+.options-header-label { -fx-text-fill: #94a3b8; -fx-font-size: 11px; }
+.comm-title-label { -fx-text-fill: #94a3b8; }
+.comm-val-label { -fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #e2e8f0; }
+
+.option-preview-btn {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 15 6 15;
+    -fx-text-fill: #e2e8f0;
+}
+
+.button.winning-option-btn {
+    -fx-background-color: #0b192c;
+    -fx-border-color: #38bdf8;
+    -fx-text-fill: #38bdf8;
+    -fx-font-weight: bold;
+    -fx-border-width: 2px;
+}
+
+/* --- Trade Action Buttons --- */
+.button.buy-option-btn {
+    -fx-background-color: #0284c7; /* Ocean blue */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.button.buy-option-btn:hover { -fx-background-color: #0ea5e9; }
+
+.button.sell-option-btn {
+    -fx-background-color: #be123c; /* Deep coral/crimson */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.button.sell-option-btn:hover { -fx-background-color: #e11d48; }
+
+.button.mm-start-btn {
+    -fx-background-color: #059669; /* Seaweed green */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+.button.mm-start-btn:hover { -fx-background-color: #10b981; }
+
+.button.mm-close-btn {
+    -fx-background-color: #be123c;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+.button.mm-close-btn:hover { -fx-background-color: #e11d48; }
+
+/* --- History participation --- */
+.history-buy {
+    -fx-background-color: #064e3b;
+    -fx-text-fill: #34d399;
+    -fx-padding: 6 10 6 10;
+    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+}
+
+.history-sell {
+    -fx-background-color: #7f1d1d;
+    -fx-text-fill: #fca5a5;
+    -fx-padding: 6 10 6 10;
+    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+}
+
+/* --- Option Card (Right Panel) --- */
+.option-card {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+}
+
+.option-name-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.option-percent-label {
+    -fx-font-size: 17px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #94a3b8;
+}
+
+.option-price-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+/* =========================================
+   POLYMARKET-STYLE PRICE CHART
+========================================= */
+.poly-chart { -fx-padding: 0; }
+.poly-chart .chart-plot-background { -fx-background-color: #112236; }
+.poly-chart .chart-content { -fx-padding: 5 5 0 5; }
+.poly-chart .chart-vertical-grid-lines { -fx-stroke: transparent; }
+.poly-chart .chart-horizontal-grid-lines { -fx-stroke: #1e3a5f; -fx-stroke-dash-array: 2 4; }
+.poly-chart .chart-plot-background, .poly-chart .plot-content { -fx-border-color: transparent; }
+.poly-chart .chart-series-line { -fx-stroke-width: 1.8px; }
+.poly-chart .axis { -fx-tick-label-fill: #94a3b8; -fx-font-size: 11px; -fx-tick-length: 4px; }
+.poly-chart .axis-tick-mark, .poly-chart .axis-minor-tick-mark, .poly-chart .axis-line, .poly-chart .axis > .axis-line { -fx-stroke: transparent; }
+.poly-chart .chart-legend { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 0 0 10 0; -fx-hgap: 18; }
+.poly-chart .chart-legend-item { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #cbd5e1; }
+.poly-chart .chart-legend-item-symbol { -fx-background-radius: 5em; -fx-background-insets: 0; -fx-padding: 4px; -fx-border-color: transparent; }
+
+/* Chart Colors for Ocean Theme */
+.poly-chart .default-color0.chart-series-line { -fx-stroke: #38bdf8; }
+.poly-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #38bdf8, transparent; }
+.poly-chart .default-color1.chart-series-line { -fx-stroke: #34d399; }
+.poly-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #34d399, transparent; }
+.poly-chart .default-color2.chart-series-line { -fx-stroke: #f472b6; }
+.poly-chart .default-color2.chart-legend-item-symbol { -fx-background-color: #f472b6, transparent; }
+.poly-chart .default-color3.chart-series-line { -fx-stroke: #fca5a5; }
+.poly-chart .default-color3.chart-legend-item-symbol { -fx-background-color: #fca5a5, transparent; }
+
+.poly-chart .chart-line-symbol { -fx-background-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; -fx-padding: 0; }
+.poly-chart .endpoint-marker { -fx-background-radius: 5em; -fx-padding: 5px; -fx-background-insets: 0; -fx-border-color: #112236; -fx-border-width: 2px; -fx-border-radius: 5em; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.50), 5, 0.3, 0, 1); }
+
+.poly-chart .default-color0.endpoint-marker { -fx-background-color: #38bdf8; }
+.poly-chart .default-color1.endpoint-marker { -fx-background-color: #34d399; }
+.poly-chart .default-color2.endpoint-marker { -fx-background-color: #f472b6; }
+.poly-chart .default-color3.endpoint-marker { -fx-background-color: #fca5a5; }
+
+/* =========================================
+   TAB PANE STYLING
+========================================= */
+.tab-pane .tab-header-background { -fx-background-color: transparent; }
+.tab-pane .tab-header-area { -fx-padding: 5 0 0 0; }
+.tab-pane .tab {
+    -fx-background-color: #112236;
+    -fx-background-radius: 6 6 0 0;
+    -fx-padding: 8 25 8 25;
+    -fx-border-color: #1e3a5f;
+    -fx-border-width: 1 1 0 1;
+    -fx-cursor: hand;
+}
+.tab-pane .tab .tab-label { -fx-text-fill: #94a3b8; -fx-font-size: 14px; -fx-font-weight: bold; }
+.tab-pane .tab:hover { -fx-background-color: #1e3a5f; }
+.tab-pane .tab:selected {
+    -fx-background-color: #0b192c;
+    -fx-border-color: #38bdf8;
+    -fx-border-width: 2 1 0 1;
+}
+.tab-pane .tab:selected .tab-label { -fx-text-fill: #38bdf8; }
+.tab-pane .tab:focus, .tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
+
+/* ==================================
+    TABLE VIEW STYLING
+   ==================================*/
+.table-view { -fx-background-color: transparent; -fx-border-color: transparent; }
+.table-view .column-header-background {
+    -fx-background-color: #112236;
+    -fx-border-width: 0;
+    -fx-padding: 0 0 8 0;
+}
+.table-view .column-header {
+    -fx-background-color: #1e293b;
+    -fx-background-radius: 20;
+    -fx-background-insets: 0 4 0 4;
+    -fx-border-width: 0;
+    -fx-size: 32px;
+    -fx-padding: 0 5 0 5;
+}
+.table-view .filler { -fx-background-color: transparent; -fx-border-width: 0; }
+.table-view .column-header .label { -fx-text-fill: #cbd5e1; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER; }
+.table-view .column-header .arrow { -fx-background-color: #cbd5e1; }
+
+.table-row-cell {
+    -fx-background-color: #112236;
+    -fx-border-color: #1e3a5f;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 38px;
+}
+.table-row-cell .text { -fx-fill: #e2e8f0; }
+
+.table-row-cell:odd { -fx-background-color: #0f1c2e; }
+.table-row-cell:selected { -fx-background-color: #1e3a8a; -fx-border-width: 0; }
+.table-row-cell:selected .text { -fx-fill: #38bdf8; }
+
+/* =========================================
+   SELECTED EVENT OVERVIEW (USER TAB)
+========================================= */
+.overview-comm-label { -fx-font-weight: bold; -fx-text-fill: #94a3b8; }
+.overview-header-label { -fx-font-weight: bold; -fx-underline: true; -fx-text-fill: #e2e8f0; }
+.overview-pl-label { -fx-font-weight: bold; -fx-text-fill: #38bdf8; -fx-font-size: 14px; }
+.overview-winner-label { -fx-font-weight: bold; -fx-text-fill: #34d399; -fx-font-size: 14px; }
+
+/* =========================================
+   Filter buttons (Event TAB)
+========================================= */
+.modern-filter {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+}
+
+.modern-filter:hover {
+    -fx-background-color: #334155;
+    -fx-border-color: #475569;
+}
+
+.modern-filter > .list-cell {
+    -fx-text-fill: #e2e8f0;
+    -fx-background-color: transparent;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+}
+.combo-box-popup .list-cell {
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #e2e8f0;
+}
+.combo-box-popup .list-cell:filled:hover,
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #334155;
+    -fx-text-fill: #38bdf8;
+}
+
+.modern-filter .list-cell:hover {
+    -fx-background-color: #334155;
+}
+
+/* Ensure the main title adapts */
+.main-app-title {
+    -fx-text-fill: #38bdf8;
+}
+
+/* =========================================
+   DARK THEME PATCHES (SplitPanes, Inputs, Extras)
+========================================= */
+.split-pane {
+    -fx-background-color: #0b192c;
+}
+.split-pane > .split-pane-divider {
+    -fx-background-color: #1e3a5f;
+    -fx-border-color: transparent;
+}
+.tab-pane .tab-content-area {
+    -fx-background-color: #0b192c;
+}
+
+.text-field {
+    -fx-background-color: #112236;
+    -fx-border-color: #1e3a5f;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #ffffff;
+    -fx-prompt-text-fill: #64748b;
+}
+.button {
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #e2e8f0;
+    -fx-border-color: #334155;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+.button:hover {
+    -fx-background-color: #334155;
+}
+
+.table-view .placeholder .label {
+    -fx-text-fill: #64748b;
+}
+
+#eventTitleLabel {
+    -fx-text-fill: #ffffff;
+}
+
+/* Theme Scrollbars */
+.scroll-bar {
+    -fx-background-color: #0b192c;
+}
+.scroll-bar .track {
+    -fx-background-color: #112236;
+    -fx-border-color: #1e3a5f;
+}
+.scroll-bar .thumb {
+    -fx-background-color: #1e3a8a;
+    -fx-background-radius: 5em;
+}
+.scroll-bar .thumb:hover {
+    -fx-background-color: #2563eb;
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-background-color: #94a3b8;
+}
+
+.label {
+    -fx-text-fill: #e2e8f0;
+}
+
+.holding-label {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 14px;
+}
+
+/* =========================================
+   CUSTOM DIALOGS & ALERTS
+========================================= */
+.modern-dialog { -fx-background-color: #112236; -fx-border-color: #1e3a5f; -fx-border-width: 1px; }
+.modern-dialog > .content.label { -fx-text-fill: #e2e8f0; -fx-font-size: 14px; -fx-padding: 10px; }
+.modern-dialog .header-panel { -fx-background-color: #0b192c; }
+.modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #38bdf8; }

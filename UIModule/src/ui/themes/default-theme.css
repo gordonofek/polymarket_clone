@@ -3,6 +3,11 @@
 /* =========================================
    STRUCTURAL & PANEL CLASSES
 ========================================= */
+
+.main-app-title {
+    -fx-text-fill: #2854b5;
+}
+
 .transparent-scroll-pane {
     -fx-background-color: transparent;
 }
@@ -99,6 +104,14 @@
     -fx-padding: 6 15 6 15;
 }
 
+.winning-option-btn {
+    -fx-background-color: #eef2ff;
+    -fx-border-color: #2854b5;
+    -fx-text-fill: #2854b5;
+    -fx-font-weight: bold;
+    -fx-border-width: 2px;
+}
+
 /* --- Trade Action Buttons --- */
 .buy-option-btn {
     -fx-background-color: #1976d2;
@@ -127,6 +140,18 @@
 .sell-option-btn:hover {
     -fx-background-color: #c5221f;
 }
+
+.mm-start-btn {
+    -fx-background-color: #2e9e5b; -fx-text-fill: white; -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12; -fx-background-radius: 6; -fx-cursor: hand;
+}
+.mm-start-btn:hover { -fx-background-color: #248049; }
+
+.mm-close-btn {
+    -fx-background-color: #d93025; -fx-text-fill: white; -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12; -fx-background-radius: 6; -fx-cursor: hand;
+}
+.mm-close-btn:hover { -fx-background-color: #c5221f; }
 
 /* --- History participation --- */
 .history-buy {
@@ -372,6 +397,10 @@
     -fx-cell-size: 38px;
 }
 
+.table-row-cell .text {
+    -fx-fill: #333333;
+}
+
 /* Subtle zebra striping for alternate rows */
 .table-row-cell:odd {
     -fx-background-color: #fafbfc;
@@ -387,3 +416,63 @@
 .table-row-cell:selected .text {
     -fx-fill: #2854b5;
 }
+
+/* =========================================
+   SELECTED EVENT OVERVIEW (USER TAB)
+========================================= */
+.overview-comm-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #555555;
+}
+
+.overview-header-label {
+    -fx-font-weight: bold;
+    -fx-underline: true;
+}
+
+.overview-pl-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #2854b5;
+    -fx-font-size: 14px;
+}
+
+.overview-winner-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #137333;
+    -fx-font-size: 14px;
+}
+
+
+/* =========================================
+   Filter buttons (Event TAB)
+========================================= */
+
+.modern-filter {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-text-fill: #333333;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+}
+
+.modern-filter:hover {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #b0b5bd;
+}
+
+/* Fixes the dropdown list styling to match */
+.modern-filter .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-radius: 0 0 6 6;
+}
+
+/* =========================================
+   CUSTOM DIALOGS & ALERTS
+========================================= */
+.modern-dialog { -fx-background-color: white; -fx-border-color: #d2d6dc; -fx-border-width: 1px; }
+.modern-dialog > .content.label { -fx-font-size: 14px; -fx-padding: 10px; }
+.modern-dialog .header-panel { -fx-background-color: #f8f9fa; }
+.modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2854b5; }

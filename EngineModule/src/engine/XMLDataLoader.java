@@ -205,19 +205,18 @@ private static List<User> parseUsers(GuessMarket guessMarket, Set<Integer> valid
 }
 
 private static void validateMarketMakers(List<Event> events, List<User> users) throws InvalidXMLException {
-    // find all the Events id's that have at least one market maker
-    Set<Integer> allManagedEventIds = new HashSet<>();
+    Map<Integer, String> mmMap = new HashMap<>();
     for (User user : users) {
-        // function that adds elements to sets, avoids duplicates
-        allManagedEventIds.addAll(user.getManagedEvents());
+        for (int eventId : user.getManagedEvents()) {
+            mmMap.put(eventId, user.getName());
+        }
     }
 
-   // pass over all events and see if we can find an event id that
-    // is not in allManagedEventIds we found from before if yes the validation failed
     for (Event event : events) {
-        if (!allManagedEventIds.contains(event.getId())) {
+        if (!mmMap.containsKey(event.getId())) {
             throw new InvalidXMLException("Validation Error: Event '" + event.getName() + "' (ID: " + event.getId() + ") has no Market Maker defined!");
         }
+        event.setMarketMaker(mmMap.get(event.getId()));
     }
 }
 

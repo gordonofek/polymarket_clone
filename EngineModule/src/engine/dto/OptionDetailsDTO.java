@@ -1,5 +1,7 @@
 package engine.dto;
 
+import java.util.List;
+
 public record OptionDetailsDTO(
         String optionName,
         double currentPrice, // משמש כערך מניה ב-LMSR או כמחיר עסקה אחרון (LAST) ב-Order Book
@@ -9,5 +11,7 @@ public record OptionDetailsDTO(
         double highestBid,   // מחיר קנייה (BID) הגבוה ביותר
         double lowestAsk,    // מחיר מכירה (ASK) הנמוך ביותר
         double midPrice,     // מחיר אמצע (MID)
-        double spread        // מרווח (SPREAD)
+        double spread,        // מרווח (SPREAD)
+        List<PendingRequestDTO> buyQueue,
+        List<PendingRequestDTO> sellQueue
 ) {}

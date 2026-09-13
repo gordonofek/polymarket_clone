@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 
 public class MainController {
@@ -68,11 +67,15 @@ public class MainController {
     @FXML private Label detailDescLabel;
     @FXML private Label detailCommLabel;
     @FXML private VBox optionsContainer;
+    @FXML private Label historyTitleLabel;
     @FXML private ListView<Label> participationsHistoryListView;
     @FXML private ListView<Label> eventparticipationsListView;
 
     @FXML private LineChart<Number, Number> priceHistoryChart;
 
+    @FXML private HBox mmControlsBox;
+    @FXML private Button startEventBtn;
+    @FXML private Button closeEventBtn;
 
     // users list
     @FXML private TableView<UserSummaryDTO> usersTableView;
@@ -91,66 +94,29 @@ public class MainController {
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioEventCol;
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioOptionCol;
     @FXML private TableColumn<PortfolioItemDTO, Number> portfolioSharesCol;
+    @FXML private TableColumn<PortfolioItemDTO, String> portfolioStatusCol;
+    @FXML private TableColumn<PortfolioItemDTO, Number> portfolioProfitLossCol;
 
     // event overview
     @FXML private Label userEventTitleLabel;
     @FXML private VBox userEventOptionsBox;
 
+    // Settings tab
+    @FXML private VBox rootVBox;
+    @FXML private CheckBox animationsToggle;
+    @FXML private ComboBox<String> themeSelector;
+    private boolean animationsEnabled = true;
+
     @FXML
     public void initialize() {
 
-        // users
-        userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
-        userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
-        userBalanceCol.setCellFactory(column -> new TableCell<UserSummaryDTO, Number>() {
-            @Override
-            protected  void updateItem(Number balance, boolean empty) {
-                super.updateItem(balance, empty);
-                if (empty || balance == null) {
-                    setText(null);
-                }
-                else {
-                    setText(String.format("%.2f", balance.doubleValue()));
-                }
-            }
-        });
-        // users - portfolio
-        portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
-        portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
-        portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
+        setupUsersTable();
+        setupPortfolioTable();
+        setupEventListeners();
 
-        if (usersTab != null) {
-            usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
-                if (isNowSelected) {
-                    refreshUsersTab();
-                }
-            });
-        }
-
-        // listener
-        searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
-        methodFilter.setOnAction(e -> updateEventList());
-        statusFilter.setOnAction(e -> updateEventList());
-        commissionFilter.setOnAction(e -> updateEventList());
-
-        // clear filters
-        clearFiltersBtn.setOnAction(e -> {
-            searchField.clear();
-            methodFilter.getSelectionModel().selectFirst();
-            statusFilter.getSelectionModel().selectFirst();
-            commissionFilter.getSelectionModel().selectFirst();
-        });
-
-        usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                loadUserDetails(newSelection);
-
-                this.activeUsername = newSelection.name();
-                if (activeUserDisplayLabel != null) {
-                    activeUserDisplayLabel.setText("Trading as: " + activeUsername);
-                }
-            }
-        });
+        // animations for market maker buttons
+        attachClickAnimation(startEventBtn);
+        attachClickAnimation(closeEventBtn);
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -203,8 +169,9 @@ public class MainController {
         Label idLabel = new Label("#" + eventSummary.id());
         idLabel.getStyleClass().add("event-id-label");
 
-        Label methodLabel = new Label(eventSummary.tradingMethodType());
-        methodLabel.getStyleClass().addAll("method-badge", "method-lmsr");
+        String methodStr = eventSummary.tradingMethodType();
+        Label methodLabel = new Label(eventSummary.tradingMethodType().replace("_", " "));
+        methodLabel.getStyleClass().addAll("method-badge", "method-" + methodStr.toLowerCase());
 
         HBox topLeftBox = new HBox(8, idLabel, methodLabel);
         topLeftBox.setAlignment(Pos.CENTER_LEFT);
@@ -212,6 +179,7 @@ public class MainController {
         // status
         Label statusLabel = new Label(eventSummary.status().replace("_", " "));
         statusLabel.getStyleClass().addAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+        statusLabel.setMinWidth(Label.USE_PREF_SIZE);
 
         // name, options header
         Label titleLabel = new Label(eventSummary.name());
@@ -234,6 +202,13 @@ public class MainController {
             Button optBtn = new Button(String.format("%s\n$%.2f", option.optionName(), option.currentPrice()));
             optBtn.getStyleClass().add("option-preview-btn");
             optBtn.setTextAlignment(TextAlignment.CENTER);
+            optBtn.setMinWidth(Button.USE_PREF_SIZE);
+
+            // Highlight if this is the winning option
+            if (eventSummary.status().equals("CLOSED") && details.winningOption() != null && details.winningOption().equals(option.optionName())) {
+                optBtn.getStyleClass().add("winning-option-btn");
+            }
+
             optionsBox.getChildren().add(optBtn);
         }
 
@@ -248,6 +223,20 @@ public class MainController {
         HBox commBox = new HBox(6, commTitle, commVal);
         commBox.setAlignment(Pos.BOTTOM_LEFT);
         commBox.setPadding(new Insets(10, 0, 0, 0));
+
+        portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                // Find the event in allEvents
+                EventSummaryDTO selectedPortfolioEvent = allEvents.stream()
+                        .filter(e -> e.name().equals(newSelection.eventName()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (selectedPortfolioEvent != null) {
+                    populateUserEventOverview(selectedPortfolioEvent, activeUsername);
+                }
+            }
+        });
 
         // add to grid
         tile.add(topLeftBox, 0, 0);
@@ -273,7 +262,7 @@ public class MainController {
         clickAnimation.setCycleCount(2);
 
         tile.setOnMouseClicked(e -> {
-            if(clickAnimation.getStatus() != Animation.Status.RUNNING) {
+            if(animationsEnabled && clickAnimation.getStatus() != Animation.Status.RUNNING) {
                 clickAnimation.playFromStart();
             }
             handleTileClick(eventSummary);
@@ -359,12 +348,12 @@ public class MainController {
         detailIdLabel.setText("#" + eventSummary.id());
 
         String methodStr = eventSummary.tradingMethodType();
-        detailMethodLabel.setText(methodStr);
-        detailMethodLabel.getStyleClass().setAll("method-badge", "method-" + methodStr.toLowerCase());
+        detailMethodLabel.setText(methodStr.replace("_", " "));
+        detailMethodLabel.getStyleClass().setAll("label", "method-badge", "method-" + methodStr.toLowerCase());
 
         String statusStr = eventSummary.status().replace("_", " ");
         detailStatusLabel.setText(statusStr);
-        detailStatusLabel.getStyleClass().setAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+        detailStatusLabel.getStyleClass().setAll("label", "status-badge", "status-" + eventSummary.status().toLowerCase());
 
         detailTitleLabel.setText(eventSummary.name());
         detailDescLabel.setText(eventSummary.description());
@@ -377,78 +366,119 @@ public class MainController {
         EventDetailsDTO historyDetails = engine.getEventState(eventSummary.id());
         List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.id());
 
+        if (historyTitleLabel != null) {
+            historyTitleLabel.setText(isOrderBook ? "Order Book Queue" : "Participation History");
+        }
+
         for (OptionDetailsDTO option : historyDetails.options()) {
-            double price = option.currentPrice();
+            double price = option.currentPrice(); // LAST price in Order Book
             String optionName = option.optionName();
-            double percentage = price * 100;
 
             HBox row = new HBox(20);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPrefHeight(50);
             row.getStyleClass().add("option-card");
 
-            // Left side: Option Name using the CSS class
             Label nameLbl = new Label(optionName);
             nameLbl.getStyleClass().add("option-name-label");
 
-            // Spacer
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
-            // Right side: Percentage using the CSS class
-            Label percentLbl = new Label(String.format("%.1f%%", percentage));
-            percentLbl.getStyleClass().add("option-percent-label");
+            // Dynamic Option Stats
+            Label statsLbl = new Label();
+            statsLbl.getStyleClass().add("option-percent-label");
 
-            // Right side: Price using the CSS class
+            if (isOrderBook) {
+                // Display the required Order Book statistics
+                statsLbl.setText(String.format("Bid: $%.2f  |  Ask: $%.2f  |  Mid: $%.2f  |  Spread: $%.2f",
+                        option.highestBid(), option.lowestAsk(), option.midPrice(), option.spread()));
+            } else {
+                // Display standard LMSR percentage
+                statsLbl.setText(String.format("%.1f%%", price * 100));
+            }
+
             Label priceLbl = new Label(String.format("$%.2f", price));
             priceLbl.getStyleClass().add("option-price-label");
 
             HBox actionButtons = new HBox(10);
             actionButtons.setAlignment(Pos.CENTER_RIGHT);
 
-            Button buyBtn = new Button(String.format("Buy %.2f¢", price * 100));
+            String buyText = isOrderBook ? "Buy" : String.format("Buy %.2f¢", price * 100);
+            Button buyBtn = new Button(buyText);
             buyBtn.getStyleClass().add("buy-option-btn");
             buyBtn.setOnAction(e -> handleBuyAction(eventSummary, optionName));
+            attachClickAnimation(buyBtn);
             actionButtons.getChildren().add(buyBtn);
 
             if(isOrderBook) {
                 Button sellBtn = new Button("Sell");
                 sellBtn.getStyleClass().add("sell-option-btn");
                 sellBtn.setOnAction(e -> handleSellAction(eventSummary, optionName));
+                attachClickAnimation(sellBtn);
                 actionButtons.getChildren().add(sellBtn);
             }
 
-            // Elements added cleanly with the spacer separating them
-            row.getChildren().addAll(nameLbl, spacer, percentLbl, priceLbl, actionButtons);
+            row.getChildren().addAll(nameLbl, spacer, statsLbl, priceLbl, actionButtons);
             optionsContainer.getChildren().add(row);
         }
 
         // trade history of the event
+        // trade history OR order book queues
         participationsHistoryListView.getItems().clear();
-        List<TradeRecordDTO> history = historyDetails.tradeHistory();
-        if(history.isEmpty()) {
-            Label emptyLbl = new Label("No trades recorded yet for this event. :C");
-            participationsHistoryListView.getItems().add(emptyLbl);
-        }
-        else {
-            for (TradeRecordDTO trade : history)
-            {
-                String text = String.format("[%s] Option: %s | Amount: %d | Paid: %.2f$",
-                        trade.action(),
-                        trade.optionName(),
-                        trade.amount(),
-                        trade.pricePaid()
-                );
-                Label tradeLabel = new Label(text);
-                tradeLabel.setMaxWidth(Double.MAX_VALUE);
 
-                if (trade.action() == ActionType.BUY) {
-                    tradeLabel.getStyleClass().add("history-buy");
+        if (isOrderBook) {
+            // ORDER BOOK: Display pending Buy/Sell Queues
+            boolean hasPendingOrders = false;
+            for (OptionDetailsDTO option : historyDetails.options()) {
+
+                // Add Buy Requests
+                for (PendingRequestDTO req : option.buyQueue()) {
+                    hasPendingOrders = true;
+                    String text = String.format("[BUY] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
+                            req.username(), option.optionName(), req.amount(), req.price());
+                    Label reqLabel = new Label(text);
+                    reqLabel.setMaxWidth(Double.MAX_VALUE);
+                    reqLabel.getStyleClass().add("history-buy"); // Reusing your green style
+                    participationsHistoryListView.getItems().add(reqLabel);
                 }
-                else {
-                    tradeLabel.getStyleClass().add("history-sell");
+
+                // Add Sell Requests
+                for (PendingRequestDTO req : option.sellQueue()) {
+                    hasPendingOrders = true;
+                    String text = String.format("[SELL] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
+                            req.username(), option.optionName(), req.amount(), req.price());
+                    Label reqLabel = new Label(text);
+                    reqLabel.setMaxWidth(Double.MAX_VALUE);
+                    reqLabel.getStyleClass().add("history-sell"); // Reusing your red style
+                    participationsHistoryListView.getItems().add(reqLabel);
                 }
-                participationsHistoryListView.getItems().add(tradeLabel);
+            }
+
+            if (!hasPendingOrders) {
+                participationsHistoryListView.getItems().add(new Label("The Order Book is currently empty."));
+            }
+
+        } else {
+            // LMSR: Display executed trade history
+            List<TradeRecordDTO> history = historyDetails.tradeHistory();
+            if(history.isEmpty()) {
+                Label emptyLbl = new Label("No trades recorded yet for this event. :C");
+                participationsHistoryListView.getItems().add(emptyLbl);
+            } else {
+                for (TradeRecordDTO trade : history) {
+                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
+                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
+                    Label tradeLabel = new Label(text);
+                    tradeLabel.setMaxWidth(Double.MAX_VALUE);
+
+                    if (trade.action() == ActionType.BUY) {
+                        tradeLabel.getStyleClass().add("history-buy");
+                    } else {
+                        tradeLabel.getStyleClass().add("history-sell");
+                    }
+                    participationsHistoryListView.getItems().add(tradeLabel);
+                }
             }
         }
 
@@ -474,6 +504,94 @@ public class MainController {
             }
         }
         updatePriceGraph(historyDetails);
+
+        boolean isMarketMaker = engine.isUserMarketMaker(activeUsername, eventSummary.id());
+        String status = eventSummary.status();
+        mmControlsBox.setVisible(isMarketMaker);
+        mmControlsBox.setManaged(isMarketMaker);
+
+        boolean canStat = isMarketMaker && status.equals("NOT_STARTED");
+        startEventBtn.setVisible(canStat);
+        startEventBtn.setManaged(canStat);
+
+        boolean canClose = isMarketMaker && status.equals("OPEN");
+        closeEventBtn.setVisible(canClose);
+        closeEventBtn.setManaged(canClose);
+    }
+
+    /** #####################################
+     *      Dialog Helped function
+     *  #####################################
+     */
+
+    private void styleDialog(Dialog<?> dialog) {
+        // Applying the current active theme to the popup
+        if (rootVBox != null && !rootVBox.getStylesheets().isEmpty()) {
+            dialog.getDialogPane().getStylesheets().addAll(rootVBox.getStylesheets());
+        }
+        // Adds a custom class so we can style the popup container
+        dialog.getDialogPane().getStyleClass().add("modern-dialog");
+    }
+
+    @FXML
+    private void handleStartEventAction() {
+        if (selectedEvent == null || activeUsername == null) return;
+
+        TradeReceiptDTO receipt = engine.startEvent(activeUsername, selectedEvent.id());
+
+        if (receipt.isSuccess()) {
+            showAlert(Alert.AlertType.INFORMATION, "Event Started", String.format("Event successfully opened!\nCost deducted: $%.2f", receipt.totalCost()));
+
+            updateEvents();
+        }
+        else {
+            showAlert(Alert.AlertType.ERROR, "Cannot start the event", receipt.message());
+        }
+    }
+
+    @FXML
+    private void handleCloseEventAction() {
+        if (selectedEvent == null || activeUsername == null) return;
+
+        EventDetailsDTO details = engine.getEventState(selectedEvent.id());
+        List<String> optionNames = new ArrayList<>();
+        for (OptionDetailsDTO option : details.options()) {
+            optionNames.add(option.optionName());
+        }
+
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(optionNames.get(0), optionNames);
+        dialog.setTitle("Close Event");
+        dialog.setHeaderText("Closing: " + selectedEvent.name());
+        dialog.setContentText("Select the winning option:");
+        styleDialog(dialog);
+
+        dialog.showAndWait().ifPresent(winningOption -> {
+            CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.id(), winningOption);
+
+            if (receipt.isSuccess()) {
+                String msg = String.format("Event Closed!\nWinner: %s\nTotal Payout: $%.2f\nCommission Taken: $%.2f\nReturned to MM: $%.2f",
+                        receipt.winningOption(), receipt.totalPayout(), receipt.commissionTaken(), receipt.leftoverPool());
+                showAlert(Alert.AlertType.INFORMATION, "Event Closed", msg);
+
+                updateEvents();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Error Closing Event", receipt.message());
+            }
+        });
+    }
+
+    private void updateEvents()
+    {
+        this.allEvents = engine.getAllEvents();
+        for (EventSummaryDTO event : this.allEvents) {
+            if (event.id() == selectedEvent.id()) {
+                this.selectedEvent = event;
+                break;
+            }
+        }
+        updateEventList();
+        updateBalance(activeUsername);
+        handleTileClick(selectedEvent);
     }
 
     private void handleBuyAction(EventSummaryDTO event, String optionName) {
@@ -495,6 +613,7 @@ public class MainController {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle(action.name() + " Shares - " + optionName);
         dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
+        styleDialog(dialog);
 
         // Set the button types
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -543,8 +662,17 @@ public class MainController {
                     TradeReceiptDTO receipt = engine.placeOrder(activeUsername ,event.id(), optionName, amount, action, priceLimit);
 
                     if (receipt.isSuccess()) {
-                        String msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
-                                receipt.totalCost(), receipt.commission());
+                        String msg;
+
+                        // Check if the order was just queued (no money exchanged hands yet)
+                        if (receipt.totalCost() == 0.0 && receipt.commission() == 0.0) {
+                            msg = "Trade submitted to the queue.";
+                        } else {
+                            // The trade actually executed right away
+                            msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
+                                    receipt.totalCost(), receipt.commission());
+                        }
+
                         showAlert(Alert.AlertType.INFORMATION, "Success", msg);
 
                         // Immediately re-trigger the click event to refresh the right panel with new prices!
@@ -568,6 +696,7 @@ public class MainController {
         alert.setTitle(title);
         alert.setHeaderText(null);
         alert.setContentText(content);
+        styleDialog(alert);
         alert.showAndWait();
     }
 
@@ -642,6 +771,220 @@ public class MainController {
                 }
             }
         }
+    }
+
+    private void populateUserEventOverview(EventSummaryDTO event, String username) {
+        userEventTitleLabel.setText("Overview for: " + event.name());
+        userEventOptionsBox.getChildren().clear();
+
+        boolean isOrderBook = event.tradingMethodType().contains("ORDER_BOOK");
+        boolean isClosed = event.status().equals("CLOSED");
+
+        // Fetch the compiled data from the Engine!
+        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.id());
+
+        VBox contentBox = new VBox(10);
+
+        Label commLabel = new Label(String.format("Total Commission Paid: $%.2f", overview.totalCommissionPaid()));
+        commLabel.getStyleClass().add("overview-comm-label");
+        contentBox.getChildren().add(commLabel);
+
+        if (isOrderBook) {
+            Label obLabel = new Label("Order Book Holdings & Costs:");
+            obLabel.getStyleClass().add("overview-header-label");
+            contentBox.getChildren().add(obLabel);
+
+            // Loop through options and display Total Paid
+            for (Map.Entry<String, Double> entry : overview.optionInvestments().entrySet()) {
+                Label optLabel = new Label(String.format("• %s: Spent $%.2f", entry.getKey(), entry.getValue()));
+                contentBox.getChildren().add(optLabel);
+            }
+
+            if (isClosed) {
+                Label plLabel = new Label(String.format("Total Profit/Loss: $%.2f", overview.profitLoss()));
+                plLabel.getStyleClass().add("overview-pl-label");
+                contentBox.getChildren().add(plLabel);
+            }
+        } else {
+            Label lmsrLabel = new Label("LMSR Trade History:");
+            lmsrLabel.getStyleClass().add("overview-header-label");
+            contentBox.getChildren().add(lmsrLabel);
+
+            if (overview.userTradeHistory().isEmpty()) {
+                contentBox.getChildren().add(new Label("No trades recorded yet."));
+            } else {
+                for (TradeRecordDTO trade : overview.userTradeHistory()) {
+                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
+                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
+                    Label tradeLabel = new Label(text);
+
+                    if (trade.action() == ActionType.BUY) {
+                        tradeLabel.getStyleClass().add("history-buy");
+                    } else {
+                        tradeLabel.getStyleClass().add("history-sell");
+                    }
+                    contentBox.getChildren().add(tradeLabel);
+                }
+            }
+
+            if (isClosed) {
+                Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
+                winnerLabel.getStyleClass().add("overview-winner-label");
+                contentBox.getChildren().add(winnerLabel);
+            }
+        }
+
+        userEventOptionsBox.getChildren().add(contentBox);
+    }
+
+    @FXML
+    private void handleAnimationToggle() {
+        this.animationsEnabled = animationsToggle.isSelected();
+        animationsToggle.setText(animationsEnabled ? "On" : "Off");
+    }
+
+    @FXML
+    private void handleThemeChange() {
+        String selectedTheme = themeSelector.getValue();
+        rootVBox.getStylesheets().clear();
+
+        try {
+            if (selectedTheme.equals("Dark Mode")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/dark-theme.css").toExternalForm());
+            } else if (selectedTheme.equals("Ocean Blue")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/ocean-theme.css").toExternalForm());
+            }
+            else if(selectedTheme.equals("Light Purple")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/purple-theme.css").toExternalForm());
+            }
+            else {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+            }
+        } catch (NullPointerException e) {
+            System.out.println("Warning: CSS file not found for " + selectedTheme);
+            // Fallback to default if the file is missing
+            rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+        }
+    }
+
+    private void attachClickAnimation(Button btn) {
+        ScaleTransition pressAnim = new ScaleTransition(Duration.millis(100), btn);
+        pressAnim.setToX(0.92);
+        pressAnim.setToY(0.92);
+        pressAnim.setAutoReverse(true);
+        pressAnim.setCycleCount(2);
+
+        btn.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> {
+            if (animationsEnabled && pressAnim.getStatus() != Animation.Status.RUNNING) {
+                pressAnim.playFromStart();
+            }
+        });
+    }
+
+    /**
+     * #########################################
+     *      Initialize Helper function
+     * #########################################
+     */
+
+    private void setupUsersTable() {
+        userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
+        userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
+        userBalanceCol.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number balance, boolean empty) {
+                super.updateItem(balance, empty);
+                if (empty || balance == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%.2f", balance.doubleValue()));
+                }
+            }
+        });
+
+        usersTableView.setRowFactory(tv -> {
+            TableRow<UserSummaryDTO> row = new TableRow<>();
+            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
+            scaleAnim.setToX(0.96);
+            scaleAnim.setToY(0.96);
+            scaleAnim.setAutoReverse(true);
+            scaleAnim.setCycleCount(2);
+
+            row.setOnMousePressed(event -> {
+                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
+                    scaleAnim.playFromStart();
+                }
+            });
+            return row;
+        });
+    }
+
+    private void setupPortfolioTable() {
+        portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
+        portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
+        portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
+        portfolioStatusCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
+        portfolioProfitLossCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().profitLoss()));
+        portfolioProfitLossCol.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number pl, boolean empty) {
+                super.updateItem(pl, empty);
+                if (empty || pl == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("$%.2f", pl.doubleValue()));
+                }
+            }
+        });
+
+        portfolioTableView.setRowFactory(tv -> {
+            TableRow<PortfolioItemDTO> row = new TableRow<>();
+            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
+            scaleAnim.setToX(0.96);
+            scaleAnim.setToY(0.96);
+            scaleAnim.setAutoReverse(true);
+            scaleAnim.setCycleCount(2);
+
+            row.setOnMousePressed(event -> {
+                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
+                    scaleAnim.playFromStart();
+                }
+            });
+            return row;
+        });
+    }
+
+    private void setupEventListeners() {
+        if (usersTab != null) {
+            usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+                if (isNowSelected) refreshUsersTab();
+            });
+        }
+
+        searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
+        methodFilter.setOnAction(e -> updateEventList());
+        statusFilter.setOnAction(e -> updateEventList());
+        commissionFilter.setOnAction(e -> updateEventList());
+
+        clearFiltersBtn.setOnAction(e -> {
+            searchField.clear();
+            methodFilter.getSelectionModel().selectFirst();
+            statusFilter.getSelectionModel().selectFirst();
+            commissionFilter.getSelectionModel().selectFirst();
+        });
+
+        usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                loadUserDetails(newSelection);
+                this.activeUsername = newSelection.name();
+                if (activeUserDisplayLabel != null) {
+                    activeUserDisplayLabel.setText("Trading as: " + activeUsername);
+                }
+                if (selectedEvent != null) {
+                    handleTileClick(selectedEvent);
+                }
+            }
+        });
     }
 
 }

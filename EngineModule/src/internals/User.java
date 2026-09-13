@@ -17,6 +17,15 @@ public class User {
     // Tracks the id's of the events this user is a market maker for
     private Set<Integer> managedEvents = new HashSet<>();
 
+    // Event id -> Total commission paid
+    private Map<Integer, Double> commissionsPaid = new HashMap<>();
+
+    // Event id -> (Option Name -> Total Money Spent)
+    private Map<Integer, Map<String, Double>> optionInvestments = new HashMap<>();
+
+    // Event id -> Total Payout received (used for profit/loss)
+    private Map<Integer, Double> payoutsReceived = new HashMap<>();
+
     public User(String name) {
         this.name = name;
         this.balance = 0.0;
@@ -36,6 +45,11 @@ public class User {
 
     public void addFunds(double amount) {
         this.balance += amount;
+
+        // decided that if the user goes back into positive balance, then he gets unblocked.
+        if (this.balance >= 0 && this.isBlocked) {
+            this.isBlocked = false;
+        }
     }
 
     public void deductFunds(double amount) {
@@ -49,6 +63,20 @@ public class User {
         portfolio.putIfAbsent(eventId, new HashMap<>());
         Map<String, Integer> eventShares = portfolio.get(eventId);
         eventShares.put(optionName, eventShares.getOrDefault(optionName, 0) + amount);
+    }
+
+    public void addCommissionPaid(int eventId, double amount) {
+        commissionsPaid.put(eventId, commissionsPaid.getOrDefault(eventId, 0.0) + amount);
+    }
+
+    public void addOptionInvestment(int eventId, String optionName, double amount) {
+        optionInvestments.putIfAbsent(eventId, new HashMap<>());
+        Map<String, Double> eventInvestments = optionInvestments.get(eventId);
+        eventInvestments.put(optionName, eventInvestments.getOrDefault(optionName, 0.0) + amount);
+    }
+
+    public void addPayoutReceived(int eventId, double amount) {
+        payoutsReceived.put(eventId, payoutsReceived.getOrDefault(eventId, 0.0) + amount);
     }
 
     public void addManagedEvent(int eventId) {
@@ -65,5 +93,21 @@ public class User {
 
     public Set<Integer> getManagedEvents() {
         return managedEvents;
+    }
+
+    public double getCommissionPaidForEvent(int eventId) {
+        return commissionsPaid.getOrDefault(eventId, 0.0);
+    }
+
+    public double getInvestmentForOption(int eventId, String optionName) {
+        return optionInvestments.getOrDefault(eventId, new HashMap<>()).getOrDefault(optionName, 0.0);
+    }
+
+    public double getPayoutForEvent(int eventId) {
+        return payoutsReceived.getOrDefault(eventId, 0.0);
+    }
+
+    public Map<Integer, Map<String, Double>> getOptionInvestments() {
+        return this.optionInvestments;
     }
 }

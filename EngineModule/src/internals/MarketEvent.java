@@ -19,6 +19,7 @@ public class MarketEvent implements Event, Serializable {
 
     // username -> (optionName -> amount of shares)
     protected Map<String, Map<String, Integer>> participantsHoldings = new HashMap<>();
+    protected String marketMaker;
 
     public MarketEvent(int id, String name, String description, int commissionPercent,
                          CommissionType commissionType, List<String> options, TradingMethods tradingMethod) {
@@ -77,6 +78,16 @@ public class MarketEvent implements Event, Serializable {
     @Override
     public TradingMethods getTradingMethod() {
         return this.tradingMethod;
+    }
+
+    @Override
+    public void setMarketMaker(String username) {
+        this.marketMaker = username;
+    }
+
+    @Override
+    public String getMarketMaker() {
+        return this.marketMaker;
     }
 
     /**
