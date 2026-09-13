@@ -110,76 +110,13 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        // users
-        userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
-        userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
-        userBalanceCol.setCellFactory(column -> new TableCell<UserSummaryDTO, Number>() {
-            @Override
-            protected  void updateItem(Number balance, boolean empty) {
-                super.updateItem(balance, empty);
-                if (empty || balance == null) {
-                    setText(null);
-                }
-                else {
-                    setText(String.format("%.2f", balance.doubleValue()));
-                }
-            }
-        });
-        // users - portfolio
-        portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
-        portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
-        portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
-        portfolioStatusCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
-        portfolioProfitLossCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().profitLoss()));
-        portfolioProfitLossCol.setCellFactory(column -> new TableCell<PortfolioItemDTO, Number>() {
-            @Override
-            protected void updateItem(Number pl, boolean empty) {
-                super.updateItem(pl, empty);
-                if (empty || pl == null) {
-                    setText(null);
-                } else {
-                    // Only show P/L text if the event is closed, otherwise leave blank or show N/A
-                    setText(String.format("$%.2f", pl.doubleValue()));
-                }
-            }
-        });
+        setupUsersTable();
+        setupPortfolioTable();
+        setupEventListeners();
 
-        if (usersTab != null) {
-            usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
-                if (isNowSelected) {
-                    refreshUsersTab();
-                }
-            });
-        }
-
-        // listener
-        searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
-        methodFilter.setOnAction(e -> updateEventList());
-        statusFilter.setOnAction(e -> updateEventList());
-        commissionFilter.setOnAction(e -> updateEventList());
-
-        // clear filters
-        clearFiltersBtn.setOnAction(e -> {
-            searchField.clear();
-            methodFilter.getSelectionModel().selectFirst();
-            statusFilter.getSelectionModel().selectFirst();
-            commissionFilter.getSelectionModel().selectFirst();
-        });
-
-        usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                loadUserDetails(newSelection);
-
-                this.activeUsername = newSelection.name();
-                if (activeUserDisplayLabel != null) {
-                    activeUserDisplayLabel.setText("Trading as: " + activeUsername);
-                }
-                // ensures that the Start/Close event buttons update when changing users and switching back to events tab
-                if (selectedEvent != null) {
-                    handleTileClick(selectedEvent);
-                }
-            }
-        });
+        // animations for market maker buttons
+        attachClickAnimation(startEventBtn);
+        attachClickAnimation(closeEventBtn);
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -467,15 +404,18 @@ public class MainController {
             HBox actionButtons = new HBox(10);
             actionButtons.setAlignment(Pos.CENTER_RIGHT);
 
-            Button buyBtn = new Button(String.format("Buy %.2f¢", price * 100));
+            String buyText = isOrderBook ? "Buy" : String.format("Buy %.2f¢", price * 100);
+            Button buyBtn = new Button(buyText);
             buyBtn.getStyleClass().add("buy-option-btn");
             buyBtn.setOnAction(e -> handleBuyAction(eventSummary, optionName));
+            attachClickAnimation(buyBtn);
             actionButtons.getChildren().add(buyBtn);
 
             if(isOrderBook) {
                 Button sellBtn = new Button("Sell");
                 sellBtn.getStyleClass().add("sell-option-btn");
                 sellBtn.setOnAction(e -> handleSellAction(eventSummary, optionName));
+                attachClickAnimation(sellBtn);
                 actionButtons.getChildren().add(sellBtn);
             }
 
@@ -908,6 +848,126 @@ public class MainController {
             // Fallback to default if the file is missing
             rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
         }
+    }
+
+    private void attachClickAnimation(Button btn) {
+        ScaleTransition pressAnim = new ScaleTransition(Duration.millis(100), btn);
+        pressAnim.setToX(0.92);
+        pressAnim.setToY(0.92);
+        pressAnim.setAutoReverse(true);
+        pressAnim.setCycleCount(2);
+
+        btn.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> {
+            if (animationsEnabled && pressAnim.getStatus() != Animation.Status.RUNNING) {
+                pressAnim.playFromStart();
+            }
+        });
+    }
+
+    /**
+     * #########################################
+     *      Initialize Helper function
+     * #########################################
+     */
+
+    private void setupUsersTable() {
+        userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
+        userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
+        userBalanceCol.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number balance, boolean empty) {
+                super.updateItem(balance, empty);
+                if (empty || balance == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("%.2f", balance.doubleValue()));
+                }
+            }
+        });
+
+        usersTableView.setRowFactory(tv -> {
+            TableRow<UserSummaryDTO> row = new TableRow<>();
+            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
+            scaleAnim.setToX(0.96);
+            scaleAnim.setToY(0.96);
+            scaleAnim.setAutoReverse(true);
+            scaleAnim.setCycleCount(2);
+
+            row.setOnMousePressed(event -> {
+                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
+                    scaleAnim.playFromStart();
+                }
+            });
+            return row;
+        });
+    }
+
+    private void setupPortfolioTable() {
+        portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
+        portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
+        portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
+        portfolioStatusCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
+        portfolioProfitLossCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().profitLoss()));
+        portfolioProfitLossCol.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(Number pl, boolean empty) {
+                super.updateItem(pl, empty);
+                if (empty || pl == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("$%.2f", pl.doubleValue()));
+                }
+            }
+        });
+
+        portfolioTableView.setRowFactory(tv -> {
+            TableRow<PortfolioItemDTO> row = new TableRow<>();
+            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
+            scaleAnim.setToX(0.96);
+            scaleAnim.setToY(0.96);
+            scaleAnim.setAutoReverse(true);
+            scaleAnim.setCycleCount(2);
+
+            row.setOnMousePressed(event -> {
+                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
+                    scaleAnim.playFromStart();
+                }
+            });
+            return row;
+        });
+    }
+
+    private void setupEventListeners() {
+        if (usersTab != null) {
+            usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+                if (isNowSelected) refreshUsersTab();
+            });
+        }
+
+        searchField.textProperty().addListener((obs, oldText, newText) -> updateEventList());
+        methodFilter.setOnAction(e -> updateEventList());
+        statusFilter.setOnAction(e -> updateEventList());
+        commissionFilter.setOnAction(e -> updateEventList());
+
+        clearFiltersBtn.setOnAction(e -> {
+            searchField.clear();
+            methodFilter.getSelectionModel().selectFirst();
+            statusFilter.getSelectionModel().selectFirst();
+            commissionFilter.getSelectionModel().selectFirst();
+        });
+
+        usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                loadUserDetails(newSelection);
+                this.activeUsername = newSelection.name();
+                if (activeUserDisplayLabel != null) {
+                    activeUserDisplayLabel.setText("Trading as: " + activeUsername);
+                }
+                if (selectedEvent != null) {
+                    handleTileClick(selectedEvent);
+                }
+            }
+        });
     }
 
 }

@@ -44,7 +44,7 @@
                   <Font name="System Bold" size="14.0" />
                </font>
             </Button>
-            <TextField fx:id="filePathField" prefHeight="30.0" promptText="Currently Loaded File path" HBox.hgrow="ALWAYS" />
+            <TextField fx:id="filePathField" editable="false" mouseTransparent="true" focusTraversable="false" prefHeight="30.0" promptText="Currently Loaded File path" HBox.hgrow="ALWAYS" />
             <ProgressBar fx:id="progressBar" prefWidth="150.0" progress="0.0" visible="false" />
          </children>
       </HBox>
