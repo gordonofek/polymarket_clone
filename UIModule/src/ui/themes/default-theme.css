@@ -3,6 +3,11 @@
 /* =========================================
    STRUCTURAL & PANEL CLASSES
 ========================================= */
+
+.main-app-title {
+    -fx-text-fill: #2854b5;
+}
+
 .transparent-scroll-pane {
     -fx-background-color: transparent;
 }
@@ -97,6 +102,14 @@
     -fx-border-radius: 8;
     -fx-background-radius: 8;
     -fx-padding: 6 15 6 15;
+}
+
+.winning-option-btn {
+    -fx-background-color: #eef2ff;
+    -fx-border-color: #2854b5;
+    -fx-text-fill: #2854b5;
+    -fx-font-weight: bold;
+    -fx-border-width: 2px;
 }
 
 /* --- Trade Action Buttons --- */
@@ -423,4 +436,31 @@
     -fx-font-weight: bold;
     -fx-text-fill: #137333;
     -fx-font-size: 14px;
+}
+
+
+/* =========================================
+   Filter buttons (Event TAB)
+========================================= */
+
+.modern-filter {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-text-fill: #333333;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+}
+
+.modern-filter:hover {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #b0b5bd;
+}
+
+/* Fixes the dropdown list styling to match */
+.modern-filter .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #d2d6dc;
+    -fx-border-radius: 0 0 6 6;
 }

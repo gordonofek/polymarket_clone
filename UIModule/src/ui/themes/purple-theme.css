@@ -1,0 +1,415 @@
+/* purple-theme.css */
+
+/* =========================================
+   GLOBAL ROOT & PANEL CLASSES
+========================================= */
+.root {
+    -fx-background-color: #f3e8ff; /* Soft lavender background */
+}
+
+.transparent-scroll-pane {
+    -fx-background-color: transparent;
+}
+.transparent-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.card-panel {
+    -fx-background-color: #ffffff; /* Clean white cards */
+    -fx-border-color: #d8b4fe;     /* Light purple borders */
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.borderless-list-view {
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-background-color: transparent;
+}
+.borderless-list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #4c1d95;
+}
+
+.users-bordered-pane {
+    -fx-border-color: #d8b4fe;
+}
+
+.user-balance-label {
+    -fx-border-color: #9333ea;
+    -fx-background-color: transparent;
+    -fx-padding: 5 10 5 10;
+    -fx-text-fill: #4c1d95;
+}
+
+/* =========================================
+   EVENTS TAB STYLING
+========================================= */
+.event-tile {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8b4fe;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 15;
+    -fx-hgap: 10;
+    -fx-vgap: 8;
+}
+
+/* --- Method Badges --- */
+.method-badge {
+    -fx-background-radius: 4;
+    -fx-padding: 2 6 2 6;
+    -fx-font-size: 10px;
+}
+
+.label.method-lmsr {
+    -fx-background-color: #fce7f3; /* Light pinkish */
+    -fx-text-fill: #db2777;
+}
+
+.label.method-order_book {
+    -fx-background-color: #ffedd5; /* Soft orange for contrast */
+    -fx-text-fill: #ea580c;
+}
+
+/* --- Status Badges --- */
+.label.status-badge {
+    -fx-font-weight: bold;
+    -fx-font-size: 11px;
+    -fx-background-radius: 10;
+    -fx-padding: 4 12 4 12;
+}
+
+.label.status-open {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #15803d;
+}
+
+.label.status-closed {
+    -fx-background-color: #ffe4e6;
+    -fx-text-fill: #e11d48;
+}
+
+.label.status-not_started {
+    -fx-background-color: #f3f4f6;
+    -fx-text-fill: #6b7280;
+}
+
+/* --- Text & Buttons --- */
+.event-id-label { -fx-text-fill: #9ca3af; -fx-font-weight: bold; -fx-font-size: 12px; }
+.event-title-label { -fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #4c1d95; }
+.event-desc-label { -fx-text-fill: #6b21a8; }
+.options-header-label { -fx-text-fill: #9ca3af; -fx-font-size: 11px; }
+.comm-title-label { -fx-text-fill: #9ca3af; }
+.comm-val-label { -fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #581c87; }
+
+.option-preview-btn {
+    -fx-background-color: #faf5ff;
+    -fx-border-color: #e9d5ff;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 6 15 6 15;
+    -fx-text-fill: #4c1d95;
+}
+
+.button.winning-option-btn {
+    -fx-background-color: #f3e8ff;
+    -fx-border-color: #9333ea;
+    -fx-text-fill: #9333ea;
+    -fx-font-weight: bold;
+    -fx-border-width: 2px;
+}
+
+/* --- Trade Action Buttons --- */
+.button.buy-option-btn {
+    -fx-background-color: #9333ea; /* Vibrant violet */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.button.buy-option-btn:hover { -fx-background-color: #a855f7; }
+
+.button.sell-option-btn {
+    -fx-background-color: #e11d48; /* Rose/Magenta */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-border-width: 0;
+    -fx-cursor: hand;
+}
+.button.sell-option-btn:hover { -fx-background-color: #f43f5e; }
+
+.button.mm-start-btn {
+    -fx-background-color: #10b981;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+.button.mm-start-btn:hover { -fx-background-color: #34d399; }
+
+.button.mm-close-btn {
+    -fx-background-color: #e11d48;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+.button.mm-close-btn:hover { -fx-background-color: #f43f5e; }
+
+/* --- History participation --- */
+.history-buy {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #15803d;
+    -fx-padding: 6 10 6 10;
+    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+}
+
+.history-sell {
+    -fx-background-color: #ffe4e6;
+    -fx-text-fill: #e11d48;
+    -fx-padding: 6 10 6 10;
+    -fx-background-radius: 4;
+    -fx-font-weight: bold;
+}
+
+/* --- Option Card (Right Panel) --- */
+.option-card {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e9d5ff;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10;
+}
+
+.option-name-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4c1d95;
+}
+
+.option-percent-label {
+    -fx-font-size: 17px;
+    -fx-font-weight: 900;
+    -fx-text-fill: #7e22ce;
+}
+
+.option-price-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4c1d95;
+}
+
+/* =========================================
+   POLYMARKET-STYLE PRICE CHART
+========================================= */
+.poly-chart { -fx-padding: 0; }
+.poly-chart .chart-plot-background { -fx-background-color: #ffffff; }
+.poly-chart .chart-content { -fx-padding: 5 5 0 5; }
+.poly-chart .chart-vertical-grid-lines { -fx-stroke: transparent; }
+.poly-chart .chart-horizontal-grid-lines { -fx-stroke: #f3e8ff; -fx-stroke-dash-array: 2 4; }
+.poly-chart .chart-plot-background, .poly-chart .plot-content { -fx-border-color: transparent; }
+.poly-chart .chart-series-line { -fx-stroke-width: 1.8px; }
+.poly-chart .axis { -fx-tick-label-fill: #9ca3af; -fx-font-size: 11px; -fx-tick-length: 4px; }
+.poly-chart .axis-tick-mark, .poly-chart .axis-minor-tick-mark, .poly-chart .axis-line, .poly-chart .axis > .axis-line { -fx-stroke: transparent; }
+.poly-chart .chart-legend { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 0 0 10 0; -fx-hgap: 18; }
+.poly-chart .chart-legend-item { -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #6b21a8; }
+.poly-chart .chart-legend-item-symbol { -fx-background-radius: 5em; -fx-background-insets: 0; -fx-padding: 4px; -fx-border-color: transparent; }
+
+/* Chart Colors for Purple Theme */
+.poly-chart .default-color0.chart-series-line { -fx-stroke: #9333ea; }
+.poly-chart .default-color0.chart-legend-item-symbol { -fx-background-color: #9333ea, transparent; }
+.poly-chart .default-color1.chart-series-line { -fx-stroke: #d946ef; }
+.poly-chart .default-color1.chart-legend-item-symbol { -fx-background-color: #d946ef, transparent; }
+.poly-chart .default-color2.chart-series-line { -fx-stroke: #8b5cf6; }
+.poly-chart .default-color2.chart-legend-item-symbol { -fx-background-color: #8b5cf6, transparent; }
+
+.poly-chart .chart-line-symbol { -fx-background-color: transparent; -fx-background-insets: 0; -fx-background-radius: 0; -fx-padding: 0; }
+.poly-chart .endpoint-marker { -fx-background-radius: 5em; -fx-padding: 5px; -fx-background-insets: 0; -fx-border-color: #ffffff; -fx-border-width: 2px; -fx-border-radius: 5em; -fx-effect: dropshadow(gaussian, rgba(147, 51, 234, 0.3), 5, 0.3, 0, 1); }
+
+.poly-chart .default-color0.endpoint-marker { -fx-background-color: #9333ea; }
+.poly-chart .default-color1.endpoint-marker { -fx-background-color: #d946ef; }
+.poly-chart .default-color2.endpoint-marker { -fx-background-color: #8b5cf6; }
+
+/* =========================================
+   TAB PANE STYLING
+========================================= */
+.tab-pane .tab-header-background { -fx-background-color: transparent; }
+.tab-pane .tab-header-area { -fx-padding: 5 0 0 0; }
+.tab-pane .tab {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6 6 0 0;
+    -fx-padding: 8 25 8 25;
+    -fx-border-color: #d8b4fe;
+    -fx-border-width: 1 1 0 1;
+    -fx-cursor: hand;
+}
+.tab-pane .tab .tab-label { -fx-text-fill: #9ca3af; -fx-font-size: 14px; -fx-font-weight: bold; }
+.tab-pane .tab:hover { -fx-background-color: #faf5ff; }
+.tab-pane .tab:selected {
+    -fx-background-color: #f3e8ff;
+    -fx-border-color: #9333ea;
+    -fx-border-width: 2 1 0 1;
+}
+.tab-pane .tab:selected .tab-label { -fx-text-fill: #9333ea; }
+.tab-pane .tab:focus, .tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
+
+/* ==================================
+    TABLE VIEW STYLING
+   ==================================*/
+.table-view { -fx-background-color: transparent; -fx-border-color: transparent; }
+.table-view .column-header-background {
+    -fx-background-color: #ffffff;
+    -fx-border-width: 0;
+    -fx-padding: 0 0 8 0;
+}
+.table-view .column-header {
+    -fx-background-color: #faf5ff;
+    -fx-background-radius: 20;
+    -fx-background-insets: 0 4 0 4;
+    -fx-border-width: 0;
+    -fx-size: 32px;
+    -fx-padding: 0 5 0 5;
+}
+.table-view .filler { -fx-background-color: transparent; -fx-border-width: 0; }
+.table-view .column-header .label { -fx-text-fill: #7e22ce; -fx-font-weight: bold; -fx-font-size: 12px; -fx-alignment: CENTER; }
+.table-view .column-header .arrow { -fx-background-color: #7e22ce; }
+
+.table-row-cell {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e9d5ff;
+    -fx-border-width: 0 0 1 0;
+    -fx-cell-size: 38px;
+}
+.table-row-cell .text { -fx-fill: #4c1d95; }
+
+.table-row-cell:odd { -fx-background-color: #faf5ff; }
+.table-row-cell:selected { -fx-background-color: #f3e8ff; -fx-border-width: 0; }
+.table-row-cell:selected .text { -fx-fill: #9333ea; }
+
+/* =========================================
+   SELECTED EVENT OVERVIEW (USER TAB)
+========================================= */
+.overview-comm-label { -fx-font-weight: bold; -fx-text-fill: #9ca3af; }
+.overview-header-label { -fx-font-weight: bold; -fx-underline: true; -fx-text-fill: #6b21a8; }
+.overview-pl-label { -fx-font-weight: bold; -fx-text-fill: #9333ea; -fx-font-size: 14px; }
+.overview-winner-label { -fx-font-weight: bold; -fx-text-fill: #10b981; -fx-font-size: 14px; }
+
+/* =========================================
+   Filter buttons (Event TAB)
+========================================= */
+.modern-filter {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8b4fe;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-text-fill: #4c1d95;
+    -fx-font-weight: normal;
+    -fx-cursor: hand;
+}
+
+.modern-filter:hover {
+    -fx-background-color: #faf5ff;
+    -fx-border-color: #c084fc;
+}
+
+.modern-filter .list-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8b4fe;
+    -fx-border-radius: 0 0 6 6;
+}
+.modern-filter .list-cell {
+    -fx-text-fill: #4c1d95;
+}
+.modern-filter .list-cell:hover {
+    -fx-background-color: #faf5ff;
+}
+
+/* Ensure the main title adapts */
+.main-app-title {
+    -fx-text-fill: #9333ea;
+}
+
+/* =========================================
+   PURPLE THEME PATCHES (SplitPanes, Inputs, Extras)
+========================================= */
+.split-pane {
+    -fx-background-color: #f3e8ff;
+}
+.split-pane > .split-pane-divider {
+    -fx-background-color: #e9d5ff;
+    -fx-border-color: transparent;
+}
+.tab-pane .tab-content-area {
+    -fx-background-color: #f3e8ff;
+}
+
+.text-field {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8b4fe;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-text-fill: #4c1d95;
+    -fx-prompt-text-fill: #a855f7;
+}
+.button {
+    -fx-background-color: #ffffff;
+    -fx-text-fill: #6b21a8;
+    -fx-border-color: #d8b4fe;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+.button:hover {
+    -fx-background-color: #faf5ff;
+}
+
+.table-view .placeholder .label {
+    -fx-text-fill: #a855f7;
+}
+
+#eventTitleLabel {
+    -fx-text-fill: #4c1d95;
+}
+
+/* Theme Scrollbars */
+.scroll-bar {
+    -fx-background-color: #f3e8ff;
+}
+.scroll-bar .track {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e9d5ff;
+}
+.scroll-bar .thumb {
+    -fx-background-color: #c084fc;
+    -fx-background-radius: 5em;
+}
+.scroll-bar .thumb:hover {
+    -fx-background-color: #a855f7;
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+.scroll-bar .increment-arrow, .scroll-bar .decrement-arrow {
+    -fx-background-color: #a855f7;
+}
+
+.label {
+    -fx-text-fill: #4c1d95;
+}
+
+.holding-label {
+    -fx-text-fill: #6b21a8;
+    -fx-font-size: 14px;
+}

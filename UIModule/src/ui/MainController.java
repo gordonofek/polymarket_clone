@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 
 import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 
 public class MainController {
@@ -102,6 +101,12 @@ public class MainController {
     @FXML private Label userEventTitleLabel;
     @FXML private VBox userEventOptionsBox;
 
+    // Settings tab
+    @FXML private VBox rootVBox;
+    @FXML private CheckBox animationsToggle;
+    @FXML private ComboBox<String> themeSelector;
+    private boolean animationsEnabled = true;
+
     @FXML
     public void initialize() {
 
@@ -169,6 +174,10 @@ public class MainController {
                 if (activeUserDisplayLabel != null) {
                     activeUserDisplayLabel.setText("Trading as: " + activeUsername);
                 }
+                // ensures that the Start/Close event buttons update when changing users and switching back to events tab
+                if (selectedEvent != null) {
+                    handleTileClick(selectedEvent);
+                }
             }
         });
     }
@@ -223,8 +232,9 @@ public class MainController {
         Label idLabel = new Label("#" + eventSummary.id());
         idLabel.getStyleClass().add("event-id-label");
 
-        Label methodLabel = new Label(eventSummary.tradingMethodType());
-        methodLabel.getStyleClass().addAll("method-badge", "method-lmsr");
+        String methodStr = eventSummary.tradingMethodType();
+        Label methodLabel = new Label(eventSummary.tradingMethodType().replace("_", " "));
+        methodLabel.getStyleClass().addAll("method-badge", "method-" + methodStr.toLowerCase());
 
         HBox topLeftBox = new HBox(8, idLabel, methodLabel);
         topLeftBox.setAlignment(Pos.CENTER_LEFT);
@@ -256,6 +266,12 @@ public class MainController {
             optBtn.getStyleClass().add("option-preview-btn");
             optBtn.setTextAlignment(TextAlignment.CENTER);
             optBtn.setMinWidth(Button.USE_PREF_SIZE);
+
+            // Highlight if this is the winning option
+            if (eventSummary.status().equals("CLOSED") && details.winningOption() != null && details.winningOption().equals(option.optionName())) {
+                optBtn.getStyleClass().add("winning-option-btn");
+            }
+
             optionsBox.getChildren().add(optBtn);
         }
 
@@ -309,7 +325,7 @@ public class MainController {
         clickAnimation.setCycleCount(2);
 
         tile.setOnMouseClicked(e -> {
-            if(clickAnimation.getStatus() != Animation.Status.RUNNING) {
+            if(animationsEnabled && clickAnimation.getStatus() != Animation.Status.RUNNING) {
                 clickAnimation.playFromStart();
             }
             handleTileClick(eventSummary);
@@ -395,12 +411,12 @@ public class MainController {
         detailIdLabel.setText("#" + eventSummary.id());
 
         String methodStr = eventSummary.tradingMethodType();
-        detailMethodLabel.setText(methodStr);
-        detailMethodLabel.getStyleClass().setAll("method-badge", "method-" + methodStr.toLowerCase());
+        detailMethodLabel.setText(methodStr.replace("_", " "));
+        detailMethodLabel.getStyleClass().setAll("label", "method-badge", "method-" + methodStr.toLowerCase());
 
         String statusStr = eventSummary.status().replace("_", " ");
         detailStatusLabel.setText(statusStr);
-        detailStatusLabel.getStyleClass().setAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+        detailStatusLabel.getStyleClass().setAll("label", "status-badge", "status-" + eventSummary.status().toLowerCase());
 
         detailTitleLabel.setText(eventSummary.name());
         detailDescLabel.setText(eventSummary.description());
@@ -862,6 +878,36 @@ public class MainController {
         }
 
         userEventOptionsBox.getChildren().add(contentBox);
+    }
+
+    @FXML
+    private void handleAnimationToggle() {
+        this.animationsEnabled = animationsToggle.isSelected();
+        animationsToggle.setText(animationsEnabled ? "On" : "Off");
+    }
+
+    @FXML
+    private void handleThemeChange() {
+        String selectedTheme = themeSelector.getValue();
+        rootVBox.getStylesheets().clear();
+
+        try {
+            if (selectedTheme.equals("Dark Mode")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/dark-theme.css").toExternalForm());
+            } else if (selectedTheme.equals("Ocean Blue")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/ocean-theme.css").toExternalForm());
+            }
+            else if(selectedTheme.equals("Light Purple")) {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/purple-theme.css").toExternalForm());
+            }
+            else {
+                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+            }
+        } catch (NullPointerException e) {
+            System.out.println("Warning: CSS file not found for " + selectedTheme);
+            // Fallback to default if the file is missing
+            rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+        }
     }
 
 }
