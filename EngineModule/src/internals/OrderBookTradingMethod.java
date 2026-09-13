@@ -179,11 +179,11 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             //calc commission(if there is ON_PURCHASE in this event) and creating TradeResult to add to tradeHistory
             double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
-            TradeResult trade1 = new TradeResult(buy_request.getOrderId(), username,true, optionName,
+            TradeResult trade1 = new TradeResult(buy_request.getOrderId(), buy_request.getUsername(),true, optionName,
                     ActionType.BUY, tradedShares, totalTransactionCost,
                     commission, "Bought successfully");
 
-            TradeResult trade2 = new TradeResult(sell_request.getOrderId(), username,true, optionName,
+            TradeResult trade2 = new TradeResult(sell_request.getOrderId(), sell_request.getUsername(),true, optionName,
                     ActionType.SELL, tradedShares, totalTransactionCost,
                     0.0, "Sold successfully");
 
@@ -282,7 +282,7 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
                 // 4. Create the receipt and add it to the history
-                TradeResult trade = new TradeResult(topBuyer.getOrderId(), username,true,
+                TradeResult trade = new TradeResult(topBuyer.getOrderId(), topBuyer.getUsername(),true,
                         optionName, ActionType.BUY, minShares, totalTransactionCost, commission,
                         "Mint successful");
 
@@ -333,6 +333,22 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
         String name = request.getOptionName();
         String username = request.getUsername();
         double price = request.getLimitPrice();
+
+        // the price cannot be equal to or greater than the base value
+        if (price >= this.baseValue) {
+            return List.of(new TradeResult(
+                    id,
+                    username,
+                    false,
+                    name,
+                    type,
+                    0,
+                    0.0,
+                    0.0,
+                    String.format("Invalid price: Limit must be at least 0.01 less than the base value ($%d).", this.baseValue)
+            ));
+        }
+
 
         List<TradeResult> allExecutedTrades = new ArrayList<>();
 

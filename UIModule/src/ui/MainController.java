@@ -68,6 +68,7 @@ public class MainController {
     @FXML private Label detailDescLabel;
     @FXML private Label detailCommLabel;
     @FXML private VBox optionsContainer;
+    @FXML private Label historyTitleLabel;
     @FXML private ListView<Label> participationsHistoryListView;
     @FXML private ListView<Label> eventparticipationsListView;
 
@@ -94,6 +95,8 @@ public class MainController {
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioEventCol;
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioOptionCol;
     @FXML private TableColumn<PortfolioItemDTO, Number> portfolioSharesCol;
+    @FXML private TableColumn<PortfolioItemDTO, String> portfolioStatusCol;
+    @FXML private TableColumn<PortfolioItemDTO, Number> portfolioProfitLossCol;
 
     // event overview
     @FXML private Label userEventTitleLabel;
@@ -121,6 +124,20 @@ public class MainController {
         portfolioEventCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().eventName()));
         portfolioOptionCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().optionName()));
         portfolioSharesCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().shares()));
+        portfolioStatusCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
+        portfolioProfitLossCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().profitLoss()));
+        portfolioProfitLossCol.setCellFactory(column -> new TableCell<PortfolioItemDTO, Number>() {
+            @Override
+            protected void updateItem(Number pl, boolean empty) {
+                super.updateItem(pl, empty);
+                if (empty || pl == null) {
+                    setText(null);
+                } else {
+                    // Only show P/L text if the event is closed, otherwise leave blank or show N/A
+                    setText(String.format("$%.2f", pl.doubleValue()));
+                }
+            }
+        });
 
         if (usersTab != null) {
             usersTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
@@ -215,6 +232,7 @@ public class MainController {
         // status
         Label statusLabel = new Label(eventSummary.status().replace("_", " "));
         statusLabel.getStyleClass().addAll("status-badge", "status-" + eventSummary.status().toLowerCase());
+        statusLabel.setMinWidth(Label.USE_PREF_SIZE);
 
         // name, options header
         Label titleLabel = new Label(eventSummary.name());
@@ -237,6 +255,7 @@ public class MainController {
             Button optBtn = new Button(String.format("%s\n$%.2f", option.optionName(), option.currentPrice()));
             optBtn.getStyleClass().add("option-preview-btn");
             optBtn.setTextAlignment(TextAlignment.CENTER);
+            optBtn.setMinWidth(Button.USE_PREF_SIZE);
             optionsBox.getChildren().add(optBtn);
         }
 
@@ -394,29 +413,38 @@ public class MainController {
         EventDetailsDTO historyDetails = engine.getEventState(eventSummary.id());
         List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.id());
 
+        if (historyTitleLabel != null) {
+            historyTitleLabel.setText(isOrderBook ? "Order Book Queue" : "Participation History");
+        }
+
         for (OptionDetailsDTO option : historyDetails.options()) {
-            double price = option.currentPrice();
+            double price = option.currentPrice(); // LAST price in Order Book
             String optionName = option.optionName();
-            double percentage = price * 100;
 
             HBox row = new HBox(20);
             row.setAlignment(Pos.CENTER_LEFT);
             row.setPrefHeight(50);
             row.getStyleClass().add("option-card");
 
-            // Left side: Option Name using the CSS class
             Label nameLbl = new Label(optionName);
             nameLbl.getStyleClass().add("option-name-label");
 
-            // Spacer
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
-            // Right side: Percentage using the CSS class
-            Label percentLbl = new Label(String.format("%.1f%%", percentage));
-            percentLbl.getStyleClass().add("option-percent-label");
+            // Dynamic Option Stats
+            Label statsLbl = new Label();
+            statsLbl.getStyleClass().add("option-percent-label");
 
-            // Right side: Price using the CSS class
+            if (isOrderBook) {
+                // Display the required Order Book statistics
+                statsLbl.setText(String.format("Bid: $%.2f  |  Ask: $%.2f  |  Mid: $%.2f  |  Spread: $%.2f",
+                        option.highestBid(), option.lowestAsk(), option.midPrice(), option.spread()));
+            } else {
+                // Display standard LMSR percentage
+                statsLbl.setText(String.format("%.1f%%", price * 100));
+            }
+
             Label priceLbl = new Label(String.format("$%.2f", price));
             priceLbl.getStyleClass().add("option-price-label");
 
@@ -435,37 +463,66 @@ public class MainController {
                 actionButtons.getChildren().add(sellBtn);
             }
 
-            // Elements added cleanly with the spacer separating them
-            row.getChildren().addAll(nameLbl, spacer, percentLbl, priceLbl, actionButtons);
+            row.getChildren().addAll(nameLbl, spacer, statsLbl, priceLbl, actionButtons);
             optionsContainer.getChildren().add(row);
         }
 
         // trade history of the event
+        // trade history OR order book queues
         participationsHistoryListView.getItems().clear();
-        List<TradeRecordDTO> history = historyDetails.tradeHistory();
-        if(history.isEmpty()) {
-            Label emptyLbl = new Label("No trades recorded yet for this event. :C");
-            participationsHistoryListView.getItems().add(emptyLbl);
-        }
-        else {
-            for (TradeRecordDTO trade : history)
-            {
-                String text = String.format("[%s] Option: %s | Amount: %d | Paid: %.2f$",
-                        trade.action(),
-                        trade.optionName(),
-                        trade.amount(),
-                        trade.pricePaid()
-                );
-                Label tradeLabel = new Label(text);
-                tradeLabel.setMaxWidth(Double.MAX_VALUE);
 
-                if (trade.action() == ActionType.BUY) {
-                    tradeLabel.getStyleClass().add("history-buy");
+        if (isOrderBook) {
+            // ORDER BOOK: Display pending Buy/Sell Queues
+            boolean hasPendingOrders = false;
+            for (OptionDetailsDTO option : historyDetails.options()) {
+
+                // Add Buy Requests
+                for (PendingRequestDTO req : option.buyQueue()) {
+                    hasPendingOrders = true;
+                    String text = String.format("[BUY] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
+                            req.username(), option.optionName(), req.amount(), req.price());
+                    Label reqLabel = new Label(text);
+                    reqLabel.setMaxWidth(Double.MAX_VALUE);
+                    reqLabel.getStyleClass().add("history-buy"); // Reusing your green style
+                    participationsHistoryListView.getItems().add(reqLabel);
                 }
-                else {
-                    tradeLabel.getStyleClass().add("history-sell");
+
+                // Add Sell Requests
+                for (PendingRequestDTO req : option.sellQueue()) {
+                    hasPendingOrders = true;
+                    String text = String.format("[SELL] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
+                            req.username(), option.optionName(), req.amount(), req.price());
+                    Label reqLabel = new Label(text);
+                    reqLabel.setMaxWidth(Double.MAX_VALUE);
+                    reqLabel.getStyleClass().add("history-sell"); // Reusing your red style
+                    participationsHistoryListView.getItems().add(reqLabel);
                 }
-                participationsHistoryListView.getItems().add(tradeLabel);
+            }
+
+            if (!hasPendingOrders) {
+                participationsHistoryListView.getItems().add(new Label("The Order Book is currently empty."));
+            }
+
+        } else {
+            // LMSR: Display executed trade history
+            List<TradeRecordDTO> history = historyDetails.tradeHistory();
+            if(history.isEmpty()) {
+                Label emptyLbl = new Label("No trades recorded yet for this event. :C");
+                participationsHistoryListView.getItems().add(emptyLbl);
+            } else {
+                for (TradeRecordDTO trade : history) {
+                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
+                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
+                    Label tradeLabel = new Label(text);
+                    tradeLabel.setMaxWidth(Double.MAX_VALUE);
+
+                    if (trade.action() == ActionType.BUY) {
+                        tradeLabel.getStyleClass().add("history-buy");
+                    } else {
+                        tradeLabel.getStyleClass().add("history-sell");
+                    }
+                    participationsHistoryListView.getItems().add(tradeLabel);
+                }
             }
         }
 
@@ -633,8 +690,17 @@ public class MainController {
                     TradeReceiptDTO receipt = engine.placeOrder(activeUsername ,event.id(), optionName, amount, action, priceLimit);
 
                     if (receipt.isSuccess()) {
-                        String msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
-                                receipt.totalCost(), receipt.commission());
+                        String msg;
+
+                        // Check if the order was just queued (no money exchanged hands yet)
+                        if (receipt.totalCost() == 0.0 && receipt.commission() == 0.0) {
+                            msg = "Trade submitted to the queue.";
+                        } else {
+                            // The trade actually executed right away
+                            msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
+                                    receipt.totalCost(), receipt.commission());
+                        }
+
                         showAlert(Alert.AlertType.INFORMATION, "Success", msg);
 
                         // Immediately re-trigger the click event to refresh the right panel with new prices!
@@ -771,8 +837,22 @@ public class MainController {
             lmsrLabel.getStyleClass().add("overview-header-label");
             contentBox.getChildren().add(lmsrLabel);
 
-            Label historyLabel = new Label("Trade history will sync once we update the backend TradeResult object.");
-            contentBox.getChildren().add(historyLabel);
+            if (overview.userTradeHistory().isEmpty()) {
+                contentBox.getChildren().add(new Label("No trades recorded yet."));
+            } else {
+                for (TradeRecordDTO trade : overview.userTradeHistory()) {
+                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
+                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
+                    Label tradeLabel = new Label(text);
+
+                    if (trade.action() == ActionType.BUY) {
+                        tradeLabel.getStyleClass().add("history-buy");
+                    } else {
+                        tradeLabel.getStyleClass().add("history-sell");
+                    }
+                    contentBox.getChildren().add(tradeLabel);
+                }
+            }
 
             if (isClosed) {
                 Label winnerLabel = new Label("Winning Option: " + overview.winningOption());

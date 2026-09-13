@@ -87,53 +87,62 @@ public class Engine implements EngineInterface {
         // 1. Fetch the raw domain object from your data structure
         Event event = eventManager.getEvent(eventId);
 
-        // 2. Cleverly use a Stream to calculate the total commission from the history
+        // 2. Stream to calculate the total commission from the history
         double totalCommission = event.getTradeHistory().stream()
                 .mapToDouble(trade -> trade.commissionPaid()) // assuming TradeResult has a commission() method
                 .sum();
 
-        // 3. Cleverly use a Stream to build the List<OptionDetailsDTO>
+        // 3. Stream to build the List<OptionDetailsDTO>
         List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
                 .map(optionName -> {
-                    // נתונים בסיסיים שקיימים בכל אירוע
                     double currentPrice = event.getOptionPrice(optionName);
-                    int shares = event.getOptionShares(optionName);
+                    int sharesBought = event.getOptionShares(optionName); // Matches your DTO field name
 
-                    // משתני עזר לסטטיסטיקות שיקבלו ערך רק אם זה Order Book
                     double bid = 0.0, ask = 0.0, mid = 0.0, spread = 0.0;
+                    List<PendingRequestDTO> buyQueue = new ArrayList<>();
+                    List<PendingRequestDTO> sellQueue = new ArrayList<>();
 
-                    // שולפים את שיטת המסחר האמיתית
                     TradingMethods method = event.getTradingMethod();
 
-                    // שימוש ב-Pattern Matching (זמין ב-Java מתקדם)
-                    // כדי לבדוק אם זה Order Book ולהמיר אותו באותה שורה
                     if (method instanceof OrderBookTradingMethod obMethod) {
                         bid = obMethod.getHighestBid(optionName);
                         ask = obMethod.getLowestAsk(optionName);
                         mid = obMethod.getMidPrice(optionName);
                         spread = obMethod.getSpread(optionName);
+
+                        // Extract Buy Requests
+                        var rawBuyRequests = obMethod.get_option_buy_requests(optionName);
+                        for (var entry : rawBuyRequests.entrySet()) {
+                            for (TradeRequest req : entry.getValue()) {
+                                buyQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "BUY"));
+                            }
+                        }
+
+                        // Extract Sell Requests
+                        var rawSellRequests = obMethod.get_option_sell_requests(optionName);
+                        for (var entry : rawSellRequests.entrySet()) {
+                            for (TradeRequest req : entry.getValue()) {
+                                sellQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "SELL"));
+                            }
+                        }
                     }
 
-                    // מחזירים את ה-DTO השלם!
+                    // Return using the exact order of your OptionDetailsDTO fields
                     return new OptionDetailsDTO(
-                            optionName,
-                            currentPrice,
-                            shares,
-                            bid,
-                            ask,
-                            mid,
-                            spread
+                            optionName, currentPrice, sharesBought,
+                            bid, ask, mid, spread,
+                            buyQueue, sellQueue
                     );
                 })
                 .toList();
 
-        // 4. Cleverly use a Stream to map the raw trade history to TradeRecordDTOs
+        // 4. Stream to map the raw trade history to TradeRecordDTOs
         List<TradeRecordDTO> historyDTOs = event.getTradeHistory().stream()
                 .map(trade -> new TradeRecordDTO(
-                        ActionType.BUY, // Defaulting to BUY based on current LMSR logic
+                        trade.action(),
                         trade.optionName(),
                         trade.sharesProcessed(),
-                        trade.totalCost() // assuming TradeResult has a cost/price method
+                        trade.totalCost()
                 ))
                 .toList();
 
@@ -180,7 +189,7 @@ public class Engine implements EngineInterface {
             return new TradeReceiptDTO(false, "User is blocked due to negative balance.", 0, 0);
         }
 
-        // 1. Capture the LIST of results instead of a single result
+        // 1. Capture the LIST of results
         List<TradeResult> results = event.processTrade(new TradeRequest(action, optionName, amount, limitPrice, username));
 
         double totalCostForInitiator = 0.0;
@@ -192,36 +201,61 @@ public class Engine implements EngineInterface {
         for (TradeResult res : results) {
 
             if (!res.isSuccess()) {
-                // If it failed (e.g., option doesn't exist), capture the error message
                 finalMessage = res.message();
                 continue;
             }
 
-            overallSuccess = true; // At least one part of the trade worked
-
-            // 3. Fetch the specific user for THIS receipt (could be the buyer or the seller!)
-            User involvedUser = userManager.getUser(res.username());
-
-            // 4. Apply the financial changes based on the action in the receipt
-            if (res.action() == ActionType.BUY) {
-                involvedUser.deductFunds(res.totalCost());
-                involvedUser.addShares(eventId, res.optionName(), res.sharesProcessed());
-                event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
-            } else if (res.action() == ActionType.SELL) {
-                involvedUser.addFunds(res.totalCost());
-                involvedUser.addShares(eventId, res.optionName(), -res.sharesProcessed());
-                event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
+            // Skip the "routed" placeholder messages (which have 0 shares) so we don't do empty math
+            if (res.sharesProcessed() == 0) {
+                finalMessage = res.message();
+                overallSuccess = true;
+                continue;
             }
 
-            // 5. Accumulate the costs/commissions ONLY for the user who initiated the request (for the UI popup)
-            if (res.username().equals(username)) {
-                totalCostForInitiator += res.totalCost();
-                totalCommissionForInitiator += res.commissionPaid();
-                finalMessage = res.message(); // Use the success message meant for them
+            overallSuccess = true;
+
+            // 3. Fetch the specific user for THIS receipt (could be the buyer or the seller!)
+            // Make sure your TradeResult uses orderId() or username() depending on your refactor!
+            User involvedUser = userManager.getUser(res.username());
+
+            // 4. Apply the financial changes AND update the Portfolio tracking maps
+            if (involvedUser != null) {
+                if (res.action() == ActionType.BUY) {
+                    involvedUser.deductFunds(res.totalCost());
+                    involvedUser.addShares(eventId, res.optionName(), res.sharesProcessed());
+                    event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
+
+                    // Track Portfolio Data
+                    involvedUser.addCommissionPaid(eventId, res.commissionPaid());
+                    involvedUser.addOptionInvestment(eventId, res.optionName(), res.totalCost());
+
+                } else if (res.action() == ActionType.SELL) {
+                    involvedUser.addFunds(res.totalCost());
+                    involvedUser.addShares(eventId, res.optionName(), -res.sharesProcessed());
+                    event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
+
+                    // Track Portfolio Data
+                    involvedUser.addOptionInvestment(eventId, res.optionName(), -res.totalCost());
+                }
+
+                // 5. Accumulate the costs/commissions ONLY for the user who initiated the request
+                if (res.username().equals(username)) {
+                    totalCostForInitiator += res.totalCost();
+                    totalCommissionForInitiator += res.commissionPaid();
+                    finalMessage = res.message();
+                }
+            }
+
+            // Pay the Market Maker any ON_PURCHASE commissions
+            if (res.commissionPaid() > 0) {
+                User marketMaker = userManager.getUser(event.getMarketMaker());
+                if (marketMaker != null) {
+                    marketMaker.addFunds(res.commissionPaid());
+                }
             }
         }
 
-        // 6. Return a summary DTO specifically for the user who clicked the button
+        // 6. Return the summary DTO
         return new TradeReceiptDTO(overallSuccess, finalMessage, totalCostForInitiator, totalCommissionForInitiator);
     }
 
@@ -276,13 +310,15 @@ public class Engine implements EngineInterface {
             String mmName = event.getMarketMaker();
             User marketMaker = userManager.getUser(mmName);
             if (marketMaker != null) {
-                marketMaker.addFunds(res.commissionTaken() + res.leftoverSubsidy());
+                double mmPayout = res.commissionTaken() + res.leftoverSubsidy();
+                marketMaker.addFunds(mmPayout);
+                marketMaker.addPayoutReceived(eventId, mmPayout);
             }
 
             // pay the winners
             // calculates how much each winning share is worth after commission
             int totalWinningShares = event.getOptionShares(winningOption);
-            double payoutPerShare = totalWinningShares > 0 ? (res.totalPayout() / totalWinningShares) : 0.0;
+            double payoutPerShare = totalWinningShares > 0 ? (res.netPayoutToWinners() / totalWinningShares) : 0.0;
 
             // loop through the event ledger to find who holds the winning option
             Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
@@ -293,7 +329,9 @@ public class Engine implements EngineInterface {
                 if (userWinningShares > 0) {
                     User winner = userManager.getUser(username);
                     if (winner != null) {
-                        winner.addFunds(userWinningShares * payoutPerShare);
+                        double userPayout = userWinningShares * payoutPerShare;
+                        winner.addFunds(userPayout);
+                        winner.addPayoutReceived(eventId, userPayout);
                     }
                 }
             }
@@ -346,7 +384,16 @@ public class Engine implements EngineInterface {
 
                     // Only add to the UI if they actually own shares (amount > 0)
                     if (shares > 0) {
-                        portfolio.add(new PortfolioItemDTO(eventName, optionName, shares));
+                        String statusStr = (event != null) ? event.getStatus().name() : "UNKNOWN";
+
+                        // Calculate Profil/Loss if closed, or show 0.0 if still open
+                        double profitLoss = 0.0;
+                        if (event != null && event.getStatus() == EventStatus.CLOSED) {
+                            UserEventOverviewDTO overview = getUserEventOverview(user.getName(), eventId);
+                            profitLoss = overview.profitLoss();
+                        }
+
+                        portfolio.add(new PortfolioItemDTO(eventName, optionName, shares, statusStr, profitLoss));
                     }
                 }
             }
@@ -375,7 +422,15 @@ public class Engine implements EngineInterface {
         // find the winner if closed
         String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
 
-        List<TradeRecordDTO> history = new java.util.ArrayList<>();
+        List<TradeRecordDTO> history = event.getTradeHistory().stream()
+                .filter(trade -> trade.username().equals(username))
+                .map(trade -> new TradeRecordDTO(
+                        trade.action(),
+                        trade.optionName(),
+                        trade.sharesProcessed(),
+                        trade.totalCost()
+                ))
+                .toList();
 
         return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner);
     }
