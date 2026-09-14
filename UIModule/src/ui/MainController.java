@@ -371,42 +371,41 @@ public class MainController {
         }
 
         for (OptionDetailsDTO option : historyDetails.options()) {
-            double price = option.currentPrice(); // LAST price in Order Book
+            double price = option.currentPrice();
             String optionName = option.optionName();
 
             HBox row = new HBox(20);
             row.setAlignment(Pos.CENTER_LEFT);
-            row.setPrefHeight(50);
+            row.setMinHeight(Region.USE_PREF_SIZE);
             row.getStyleClass().add("option-card");
+            row.setPadding(new Insets(10, 15, 10, 15));
 
             Label nameLbl = new Label(optionName);
             nameLbl.getStyleClass().add("option-name-label");
+            nameLbl.setMinWidth(Region.USE_PREF_SIZE);
 
             Region spacer = new Region();
             HBox.setHgrow(spacer, Priority.ALWAYS);
 
-            // Dynamic Option Stats
             Label statsLbl = new Label();
             statsLbl.getStyleClass().add("option-percent-label");
+            statsLbl.setTextAlignment(TextAlignment.CENTER);
 
-            if (isOrderBook) {
-                // Display the required Order Book statistics
-                statsLbl.setText(String.format("Bid: $%.2f  |  Ask: $%.2f  |  Mid: $%.2f  |  Spread: $%.2f",
-                        option.highestBid(), option.lowestAsk(), option.midPrice(), option.spread()));
-            } else {
-                // Display standard LMSR percentage
-                statsLbl.setText(String.format("%.1f%%", price * 100));
-            }
+            statsLbl.setWrapText(false);
+            statsLbl.setMinWidth(0);
 
             Label priceLbl = new Label(String.format("$%.2f", price));
             priceLbl.getStyleClass().add("option-price-label");
+            priceLbl.setMinWidth(Region.USE_PREF_SIZE);
 
             HBox actionButtons = new HBox(10);
             actionButtons.setAlignment(Pos.CENTER_RIGHT);
+            actionButtons.setMinWidth(Region.USE_PREF_SIZE);
 
             String buyText = isOrderBook ? "Buy" : String.format("Buy %.2f¢", price * 100);
             Button buyBtn = new Button(buyText);
             buyBtn.getStyleClass().add("buy-option-btn");
+            buyBtn.setMinWidth(Button.USE_PREF_SIZE);
             buyBtn.setOnAction(e -> handleBuyAction(eventSummary, optionName));
             attachClickAnimation(buyBtn);
             actionButtons.getChildren().add(buyBtn);
@@ -414,12 +413,25 @@ public class MainController {
             if(isOrderBook) {
                 Button sellBtn = new Button("Sell");
                 sellBtn.getStyleClass().add("sell-option-btn");
+                sellBtn.setMinWidth(Button.USE_PREF_SIZE);
                 sellBtn.setOnAction(e -> handleSellAction(eventSummary, optionName));
                 attachClickAnimation(sellBtn);
                 actionButtons.getChildren().add(sellBtn);
             }
 
-            row.getChildren().addAll(nameLbl, spacer, statsLbl, priceLbl, actionButtons);
+            if (isOrderBook) {
+                statsLbl.setText(String.format("Bid: $%.2f  |  Ask: $%.2f\nMid: $%.2f  |  Spread: $%.2f",
+                        option.highestBid(), option.lowestAsk(), option.midPrice(), option.spread()));
+
+                Region rightSpacer = new Region();
+                HBox.setHgrow(rightSpacer, Priority.ALWAYS);
+
+                row.getChildren().addAll(nameLbl, spacer, statsLbl, rightSpacer, priceLbl, actionButtons);
+            } else {
+                statsLbl.setText(String.format("%.1f%%", price * 100));
+                row.getChildren().addAll(nameLbl, spacer, statsLbl, priceLbl, actionButtons);
+            }
+
             optionsContainer.getChildren().add(row);
         }
 
@@ -633,7 +645,7 @@ public class MainController {
 
         // Only show the price limit field if it's an Order Book event
         if (isOrderBook) {
-            grid.add(new Label("Price limit ($):"), 0, 1);
+            grid.add(new Label("Price limit ($) (Price Per Share):"), 0, 1);
             grid.add(priceField, 1, 1);
         }
 
@@ -888,6 +900,8 @@ public class MainController {
      */
 
     private void setupUsersTable() {
+        userNameLabelEvents.setMinWidth(Region.USE_PREF_SIZE);
+        userBalanceLabelEvents.setMinWidth(Region.USE_PREF_SIZE);
         userNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().name()));
         userBalanceCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleDoubleProperty(cellData.getValue().balance()));
         userBalanceCol.setCellFactory(column -> new TableCell<>() {
