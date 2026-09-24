@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Class-Path: dependencies/jaxb/angus-activation.jar dependencies/jaxb/jak
+ arta.activation-api.jar dependencies/jaxb/jakarta.xml.bind-api.jar depe
+ ndencies/jaxb/jaxb-core.jar dependencies/jaxb/jaxb-impl.jar dependencie
+ s/jaxb/jaxb-jxc.jar dependencies/jaxb/jaxb-xjc.jar
+

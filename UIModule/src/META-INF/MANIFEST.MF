@@ -1,7 +1,15 @@
 Manifest-Version: 1.0
-Main-Class: Main
-Class-Path: engine.jar dependencies/angus-activation.jar dependencies/ja
- karta.activation-api.jar dependencies/jakarta.xml.bind-api.jar dependen
- cies/jaxb-core.jar dependencies/jaxb-impl.jar dependencies/jaxb-jxc.jar
-  dependencies/jaxb-xjc.jar
+Main-Class: Launcher
+Class-Path: engine.jar dependencies/jaxb/angus-activation.jar dependenci
+ es/jaxb/jakarta.activation-api.jar dependencies/jaxb/jakarta.xml.bind-a
+ pi.jar dependencies/jaxb/jaxb-core.jar dependencies/jaxb/jaxb-impl.jar 
+ dependencies/jaxb/jaxb-jxc.jar dependencies/jaxb/jaxb-xjc.jar dependenc
+ ies/javafx/lib/javafx.base.jar dependencies/javafx/lib/javafx.controls.
+ jar dependencies/javafx/lib/javafx.fxml.jar dependencies/javafx/lib/jav
+ afx.graphics.jar dependencies/javafx/lib/javafx.media.jar dependencies/
+ javafx/lib/javafx.swing.jar dependencies/javafx/lib/javafx.web.jar depe
+ ndencies/javafx/lib/javafx-swt.jar dependencies/javafx/lib/jdk.jsobject
+ .jar dependencies/javafx/lib/jfx.incubator.input.jar dependencies/javaf
+ x/lib/jfx.incubator.richtext.jar dependencies/javafx/lib/javafx.propert
+ ies
 
