@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<!-- Users tab: included from test.fxml -->
+<SplitPane dividerPositions="0.35" prefHeight="160.0" prefWidth="200.0" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.UsersTabController">
+   <items>
+      <!-- LEFT SIDE: Users Table -->
+      <VBox spacing="10.0" styleClass="card-panel">
+         <padding>
+            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+         </padding>
+         <children>
+            <Label styleClass="event-title-label" text="Registered Users" />
+            <TableView fx:id="usersTableView" styleClass="borderless-list-view" VBox.vgrow="ALWAYS">
+               <columns>
+                  <TableColumn fx:id="userNameCol" prefWidth="140.0" reorderable="false" text="User Name" />
+                  <TableColumn fx:id="userBalanceCol" prefWidth="130.0" reorderable="false" text="Balance ($)" />
+               </columns>
+            </TableView>
+         </children>
+      </VBox>
+
+      <!-- RIGHT SIDE: Single User Details -->
+      <VBox minWidth="350.0" spacing="12.0">
+         <padding>
+            <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+         </padding>
+         <children>
+            <!-- Header: User Name and Balance -->
+            <HBox alignment="CENTER_LEFT" spacing="15.0" styleClass="card-panel">
+               <padding>
+                  <Insets bottom="10.0" left="15.0" right="15.0" top="10.0" />
+               </padding>
+               <children>
+                  <Label fx:id="userNameLabel" styleClass="event-title-label" text="Select a user...">
+                     <font>
+                        <Font size="20.0" />
+                     </font>
+                  </Label>
+                  <Region HBox.hgrow="ALWAYS" />
+                  <Label styleClass="comm-title-label" text="Available Cash:" />
+                  <!-- FIXED: Escaped the FXML variable string to prevent KeyPath.parse crash -->
+                  <Label fx:id="userBalanceLabel" styleClass="option-price-label" text="\$0.00" />
+               </children>
+            </HBox>
+
+            <!-- Vertical Split for Portfolio and Event Details -->
+            <SplitPane dividerPositions="0.6" orientation="VERTICAL" style="-fx-background-color: transparent; -fx-padding: 0;" VBox.vgrow="ALWAYS">
+               <items>
+                  <!-- Top Half: Portfolio Table -->
+                  <VBox spacing="8.0" styleClass="card-panel">
+                     <padding>
+                        <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                     </padding>
+                     <children>
+                        <Label styleClass="event-title-label" text="User's Portfolio" />
+                        <TableView fx:id="portfolioTableView" styleClass="borderless-list-view" VBox.vgrow="ALWAYS">
+                           <columns>
+                              <TableColumn fx:id="portfolioEventCol" prefWidth="180.0" reorderable="false" text="Event Name" />
+                              <TableColumn fx:id="portfolioOptionCol" prefWidth="101.0" reorderable="false" text="Option" />
+                              <TableColumn fx:id="portfolioSharesCol" prefWidth="139.0" reorderable="false" text="Shares Owned" />
+                              <TableColumn fx:id="portfolioStatusCol" prefWidth="98.0" reorderable="false" text="Status" />
+                              <TableColumn fx:id="portfolioProfitLossCol" prefWidth="108.0" reorderable="false" text="Profit/Loss" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+
+                  <!-- Bottom Half: Selected Event Overview -->
+                  <VBox spacing="8.0" styleClass="card-panel">
+                     <padding>
+                        <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                     </padding>
+                     <children>
+                        <Label styleClass="event-title-label" text="Selected Event Overview" />
+                        <Label fx:id="userEventTitleLabel" styleClass="event-desc-label" text="Select an event from the portfolio to view its current state." wrapText="true" />
+
+                        <!-- Container for dynamically added option prices -->
+                        <ScrollPane fitToWidth="true" styleClass="transparent-scroll-pane" VBox.vgrow="ALWAYS">
+                           <content>
+                              <VBox fx:id="userEventOptionsBox" spacing="5.0" />
+                           </content>
+                        </ScrollPane>
+                     </children>
+                  </VBox>
+               </items>
+            </SplitPane>
+         </children>
+      </VBox>
+   </items>
+</SplitPane>

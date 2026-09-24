@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.String?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<!-- Settings tab: included from test.fxml -->
+<VBox spacing="20.0" styleClass="card-panel" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.SettingsTabController">
+   <padding>
+      <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+   </padding>
+   <children>
+      <Label styleClass="event-title-label" text="Application Settings">
+         <font>
+            <Font size="24.0" />
+         </font>
+      </Label>
+
+      <!-- Animations Toggle -->
+      <HBox alignment="CENTER_LEFT" spacing="15.0">
+         <children>
+            <Label styleClass="comm-title-label" text="Enable Animations:">
+               <font>
+                  <Font name="System Bold" size="14.0" />
+               </font>
+            </Label>
+            <CheckBox fx:id="animationsToggle" mnemonicParsing="false" onAction="#handleAnimationToggle" selected="true" text="On" />
+         </children>
+      </HBox>
+
+      <!-- Theme Selector -->
+      <HBox alignment="CENTER_LEFT" spacing="15.0">
+         <children>
+            <Label styleClass="comm-title-label" text="Application Theme:">
+               <font>
+                  <Font name="System Bold" size="14.0" />
+               </font>
+            </Label>
+            <ComboBox fx:id="themeSelector" onAction="#handleThemeChange" promptText="Select Theme" styleClass="modern-filter">
+               <items>
+                  <FXCollections fx:factory="observableArrayList">
+                     <String fx:value="Default Light" />
+                     <String fx:value="Dark Mode" />
+                     <String fx:value="Ocean Blue" />
+                     <String fx:value="Light Purple" />
+                  </FXCollections>
+               </items>
+            </ComboBox>
+         </children>
+      </HBox>
+   </children>
+</VBox>
