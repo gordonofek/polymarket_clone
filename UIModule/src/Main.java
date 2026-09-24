@@ -26,8 +26,9 @@ public class Main extends Application {
         Parent root = loader.load();
 
         LoginController loginController = loader.getController();
-        loginController.setOnLogin((username, password) -> {
-            // the user name and password aren't used yet
+        // the login controller talks to the server; we only hear about successful logins
+        loginController.setOnLoginSuccess(username -> {
+            // the user name isn't used yet
             try {
                 showMainScreen();
             } catch (IOException e) {
@@ -50,14 +51,22 @@ public class Main extends Application {
         primaryStage.setMinHeight(600.0);
     }
 
-    // puts the screen in the window, resizes the window to fit it and centers it
+    // puts the screen in the window
     private void setScene(Parent root) {
-        Scene scene = new Scene(root);
-        scene.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+        Scene currentScene = primaryStage.getScene();
 
-        primaryStage.setScene(scene);
-        primaryStage.sizeToScene();
-        primaryStage.centerOnScreen();
+        if (currentScene == null) {
+            // first screen: create the scene, size the window to fit it and center it
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+
+            primaryStage.setScene(scene);
+            primaryStage.sizeToScene();
+            primaryStage.centerOnScreen();
+        } else {
+            // later screens: only swap the content, so the window keeps the size and position
+            currentScene.setRoot(root);
+        }
     }
 
 

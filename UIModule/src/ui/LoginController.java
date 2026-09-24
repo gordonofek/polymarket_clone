@@ -1,38 +1,38 @@
 package ui;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Controller for the login screen (login.fxml).
- * It only checks that a user name and password were typed; what happens after a
- * successful login is decided by whoever calls setOnLogin (Main switches to the main screen).
+ * Checks the user name, sends the login request, and shows any error.
+ * Only when the login succeeds does it call the onLoginSuccess callback
+ * (Main uses it to switch to the main screen).
  */
 public class LoginController {
 
     @FXML private TextField usernameField;
-    @FXML private PasswordField passwordField;
     @FXML private Label errorLabel;
+    @FXML private Button loginBtn;
 
-    // called with the user name and password when the user logs in
-    private BiConsumer<String, String> onLogin;
+    // called with the user name once the login succeeded
+    private Consumer<String> onLoginSuccess;
 
     @FXML
     public void initialize() {
         // need to hide the error again as soon as the user starts fixing it
         usernameField.textProperty().addListener((obs, oldText, newText) -> hideError());
-        passwordField.textProperty().addListener((obs, oldText, newText) -> hideError());
     }
 
-    public void setOnLogin(BiConsumer<String, String> onLogin) {
-        this.onLogin = onLogin;
+    public void setOnLoginSuccess(Consumer<String> onLoginSuccess) {
+        this.onLoginSuccess = onLoginSuccess;
     }
 
-    // shows a message under the fields (for example a rejection from the server)
+    // shows a message under the user name field (for example a rejection from the server)
     public void showError(String message) {
         errorLabel.setText(message);
         errorLabel.setVisible(true);
@@ -44,12 +44,17 @@ public class LoginController {
         errorLabel.setManaged(false);
     }
 
+    // while waiting for the server lock the form so the user can't send a second login
+    private void setBlock(boolean block) {
+        usernameField.setDisable(block);
+        loginBtn.setDisable(block);
+        loginBtn.setText(block ? "Logging in..." : "Log In");
+    }
+
     // runs when the Log In button is clicked or Enter is pressed
     @FXML
     private void handleLogin() {
         String username = usernameField.getText().trim();
-        // the password is not trimmed, spaces can be part of it
-        String password = passwordField.getText();
 
         if (username.isEmpty()) {
             showError("Please enter a user name.");
@@ -57,14 +62,28 @@ public class LoginController {
             return;
         }
 
-        if (password.isEmpty()) {
-            showError("Please enter a password.");
-            passwordField.requestFocus();
-            return;
-        }
+        sendLoginRequest(username);
+    }
 
-        if (onLogin != null) {
-            onLogin.accept(username, password);
+
+
+    /**
+     * Sends the login to the server.
+     *
+     * TODO when we have a server:
+     *  build a login request with the user name.
+     *      success        -> onLoginSuccess.accept(username)
+     *      server refused -> setBlock(false); showError(message from the server)
+     *      no connection  -> setBlock(false); showError("Can't reach the server. Is it running?")
+     */
+    private void sendLoginRequest(String username) {
+        setBlock(true);
+
+        // no server yet so every login succeeds
+
+        setBlock(false);
+        if (onLoginSuccess != null) {
+            onLoginSuccess.accept(username);
         }
     }
 }

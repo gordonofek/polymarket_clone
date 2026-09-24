@@ -3,7 +3,6 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
@@ -38,21 +37,10 @@
                </children>
             </VBox>
 
-            <VBox spacing="6.0">
-               <children>
-                  <Label styleClass="comm-title-label" text="Password:">
-                     <font>
-                        <Font name="System Bold" size="13.0" />
-                     </font>
-                  </Label>
-                  <PasswordField fx:id="passwordField" prefHeight="32.0" promptText="Enter your password" />
-               </children>
-            </VBox>
-
             <!-- Hidden until there is something to show -->
             <Label fx:id="errorLabel" managed="false" maxWidth="1.7976931348623157E308" styleClass="history-sell" visible="false" wrapText="true" />
 
-            <Button defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLogin" styleClass="buy-option-btn" text="Log In" />
+            <Button fx:id="loginBtn" defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLogin" styleClass="buy-option-btn" text="Log In" />
          </children>
       </VBox>
    </children>
