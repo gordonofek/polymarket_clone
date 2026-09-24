@@ -12,6 +12,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.text.TextAlignment;
@@ -22,6 +23,7 @@ import javafx.animation.ScaleTransition;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,12 +33,12 @@ import javafx.scene.chart.XYChart;
 
 public class MainController {
 
-    EngineInterface engine = new Engine();
+    private EngineInterface engine = new Engine();
 
     // Top part
     @FXML private Button loadFileBtn;
     @FXML private TextField filePathField;
-    @FXML ProgressBar progressBar;
+    @FXML private ProgressBar progressBar;
 
     // Active user - events
     @FXML private Label userNameLabelEvents;
@@ -48,9 +50,9 @@ public class MainController {
     // Filters
     @FXML private TextField searchField;
     @FXML private Button clearFiltersBtn;
-    @FXML ComboBox<String> methodFilter;
-    @FXML ComboBox<String> statusFilter;
-    @FXML ComboBox<String> commissionFilter;
+    @FXML private ComboBox<String> methodFilter;
+    @FXML private ComboBox<String> statusFilter;
+    @FXML private ComboBox<String> commissionFilter;
 
     // Events display
     @FXML private VBox eventsContainer;
@@ -89,7 +91,6 @@ public class MainController {
     @FXML private Label userBalanceLabel;
 
     // portfolio table
-    // portfolio table
     @FXML private TableView<PortfolioItemDTO> portfolioTableView;
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioEventCol;
     @FXML private TableColumn<PortfolioItemDTO, String> portfolioOptionCol;
@@ -121,6 +122,7 @@ public class MainController {
 
     public void loadData(List<EventSummaryDTO> events)
     {
+        resetSelection();
         this.allEvents = events;
         updateEventList();
 
@@ -150,6 +152,42 @@ public class MainController {
             GridPane tile = createEventTile(event);
             eventsContainer.getChildren().add(tile);
         }
+    }
+
+    // clears the selected event and user so nothing points at the previously loaded file
+    private void resetSelection()
+    {
+        selectedEvent = null;
+        activeUsername = null;
+
+        // event details panel
+        detailIdLabel.setText("");
+        detailMethodLabel.setText("");
+        detailMethodLabel.getStyleClass().setAll("label");
+        detailStatusLabel.setText("");
+        detailStatusLabel.getStyleClass().setAll("label");
+        detailTitleLabel.setText("Select an event to view details");
+        detailDescLabel.setText("Click any event tile on the left panel to display full specifications here.");
+        detailCommLabel.setText("N/A");
+        optionsContainer.getChildren().clear();
+        participationsHistoryListView.getItems().clear();
+        eventparticipationsListView.getItems().clear();
+        priceHistoryChart.getData().clear();
+        mmControlsBox.setVisible(false);
+        mmControlsBox.setManaged(false);
+
+        // active user
+        usersTableView.getSelectionModel().clearSelection();
+        userNameLabelEvents.setText("Select a user...");
+        userBalanceLabelEvents.setText("$0.00");
+        userNameLabel.setText("Select a user...");
+        userBalanceLabel.setText("$0.00");
+        if (activeUserDisplayLabel != null) {
+            activeUserDisplayLabel.setText("");
+        }
+        portfolioTableView.getItems().clear();
+        userEventOptionsBox.getChildren().clear();
+        userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
     }
 
     private GridPane createEventTile(EventSummaryDTO eventSummary) {
@@ -224,20 +262,6 @@ public class MainController {
         commBox.setAlignment(Pos.BOTTOM_LEFT);
         commBox.setPadding(new Insets(10, 0, 0, 0));
 
-        portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                // Find the event in allEvents
-                EventSummaryDTO selectedPortfolioEvent = allEvents.stream()
-                        .filter(e -> e.name().equals(newSelection.eventName()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (selectedPortfolioEvent != null) {
-                    populateUserEventOverview(selectedPortfolioEvent, activeUsername);
-                }
-            }
-        });
-
         // add to grid
         tile.add(topLeftBox, 0, 0);
         tile.add(statusLabel, 1, 0);
@@ -252,19 +276,11 @@ public class MainController {
         tile.add(commBox, 0, 3);
 
 
-        // ----------- Testing Animation --------------
-        ScaleTransition clickAnimation = new ScaleTransition(Duration.millis(200), tile);
-        clickAnimation.setFromX(1.0);
-        clickAnimation.setFromY(1.0);
-        clickAnimation.setToX(1.02);
-        clickAnimation.setToY(1.02);
-        clickAnimation.setAutoReverse(true);
-        clickAnimation.setCycleCount(2);
+        // click animation for the tile
+        ScaleTransition clickAnimation = createPulseAnimation(tile, 200, 1.02);
 
         tile.setOnMouseClicked(e -> {
-            if(animationsEnabled && clickAnimation.getStatus() != Animation.Status.RUNNING) {
-                clickAnimation.playFromStart();
-            }
+            playIfEnabled(clickAnimation);
             handleTileClick(eventSummary);
         });
 
@@ -323,6 +339,7 @@ public class MainController {
             });
 
             loadTask.setOnFailed(e-> {
+                progressBar.setVisible(false);
                 loadFileBtn.setDisable(false);
                 filePathField.setText("Error loading file.");
 
@@ -338,7 +355,6 @@ public class MainController {
         }
     }
 
-    @FXML
     private void handleTileClick(EventSummaryDTO eventSummary)
     {
         this.selectedEvent = eventSummary;
@@ -447,23 +463,13 @@ public class MainController {
                 // Add Buy Requests
                 for (PendingRequestDTO req : option.buyQueue()) {
                     hasPendingOrders = true;
-                    String text = String.format("[BUY] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
-                            req.username(), option.optionName(), req.amount(), req.price());
-                    Label reqLabel = new Label(text);
-                    reqLabel.setMaxWidth(Double.MAX_VALUE);
-                    reqLabel.getStyleClass().add("history-buy"); // Reusing your green style
-                    participationsHistoryListView.getItems().add(reqLabel);
+                    addPendingRequestLabel(req, option.optionName(), true);
                 }
 
                 // Add Sell Requests
                 for (PendingRequestDTO req : option.sellQueue()) {
                     hasPendingOrders = true;
-                    String text = String.format("[SELL] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
-                            req.username(), option.optionName(), req.amount(), req.price());
-                    Label reqLabel = new Label(text);
-                    reqLabel.setMaxWidth(Double.MAX_VALUE);
-                    reqLabel.getStyleClass().add("history-sell"); // Reusing your red style
-                    participationsHistoryListView.getItems().add(reqLabel);
+                    addPendingRequestLabel(req, option.optionName(), false);
                 }
             }
 
@@ -479,16 +485,8 @@ public class MainController {
                 participationsHistoryListView.getItems().add(emptyLbl);
             } else {
                 for (TradeRecordDTO trade : history) {
-                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
-                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
-                    Label tradeLabel = new Label(text);
+                    Label tradeLabel = createTradeLabel(trade);
                     tradeLabel.setMaxWidth(Double.MAX_VALUE);
-
-                    if (trade.action() == ActionType.BUY) {
-                        tradeLabel.getStyleClass().add("history-buy");
-                    } else {
-                        tradeLabel.getStyleClass().add("history-sell");
-                    }
                     participationsHistoryListView.getItems().add(tradeLabel);
                 }
             }
@@ -651,56 +649,65 @@ public class MainController {
 
         dialog.getDialogPane().setContent(grid);
 
-        // Convert the result when OK is clicked
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                try {
-                    int amount = Integer.parseInt(amountField.getText().trim());
-                    if (amount <= 0) {
-                        showAlert(Alert.AlertType.ERROR, "Invalid Input", "Amount must be greater than 0.");
-                        return null;
-                    }
-
-                    double priceLimit = 0.0;
-                    if (isOrderBook) {
-                        priceLimit = Double.parseDouble(priceField.getText().trim());
-                        if (priceLimit <= 0) {
-                            showAlert(Alert.AlertType.ERROR, "Invalid Input", "Price limit must be greater than 0.");
-                            return null;
-                        }
-                    }
-
-                    // Send the trade to the engine
-                    TradeReceiptDTO receipt = engine.placeOrder(activeUsername ,event.id(), optionName, amount, action, priceLimit);
-
-                    if (receipt.isSuccess()) {
-                        String msg;
-
-                        // Check if the order was just queued (no money exchanged hands yet)
-                        if (receipt.totalCost() == 0.0 && receipt.commission() == 0.0) {
-                            msg = "Trade submitted to the queue.";
-                        } else {
-                            // The trade actually executed right away
-                            msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
-                                    receipt.totalCost(), receipt.commission());
-                        }
-
-                        showAlert(Alert.AlertType.INFORMATION, "Success", msg);
-
-                        // Immediately re-trigger the click event to refresh the right panel with new prices!
-                        handleTileClick(event);
-                    } else {
-                        showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
-                    }
-
-                } catch (NumberFormatException e) {
-                    showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter valid numeric values.");
+        // Validate and place the order when OK is clicked.
+        // Consuming the event keeps the dialog open so the user can fix their input.
+        TradeReceiptDTO[] successfulReceipt = new TradeReceiptDTO[1];
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(javafx.event.ActionEvent.ACTION, actionEvent -> {
+            try {
+                int amount = Integer.parseInt(amountField.getText().trim());
+                if (amount <= 0) {
+                    showAlert(Alert.AlertType.ERROR, "Invalid Input", "Amount must be greater than 0.");
+                    actionEvent.consume();
+                    return;
                 }
+
+                double priceLimit = 0.0;
+                if (isOrderBook) {
+                    priceLimit = Double.parseDouble(priceField.getText().trim());
+                    if (priceLimit <= 0) {
+                        showAlert(Alert.AlertType.ERROR, "Invalid Input", "Price limit must be greater than 0.");
+                        actionEvent.consume();
+                        return;
+                    }
+                }
+
+                // Send the trade to the engine
+                TradeReceiptDTO receipt = engine.placeOrder(activeUsername ,event.id(), optionName, amount, action, priceLimit);
+
+                if (receipt.isSuccess()) {
+                    successfulReceipt[0] = receipt;
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
+                    actionEvent.consume();
+                }
+
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter valid numeric values.");
+                actionEvent.consume();
             }
-            return null;
         });
 
         dialog.showAndWait();
+
+        TradeReceiptDTO receipt = successfulReceipt[0];
+        if (receipt != null) {
+            String msg;
+
+            // Check if the order was just queued (no money exchanged hands yet)
+            if (receipt.totalCost() == 0.0 && receipt.commission() == 0.0) {
+                msg = "Trade submitted to the queue.";
+            } else {
+                // The trade actually executed right away
+                msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
+                        receipt.totalCost(), receipt.commission());
+            }
+
+            showAlert(Alert.AlertType.INFORMATION, "Success", msg);
+
+            // Reload all events so both the event tiles and the right panel show the new prices
+            updateEvents();
+        }
     }
 
     private void showAlert(Alert.AlertType type, String title, String content) {
@@ -750,6 +757,7 @@ public class MainController {
     }
 
     private void updateBalance(String activeUsername) {
+        if (activeUsername == null) return;
         UserDetailsDTO details = engine.getUserDetails(activeUsername);
         userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
     }
@@ -761,13 +769,12 @@ public class MainController {
         userBalanceLabel.setText(String.format("$%.2f", details.balance()));
         portfolioTableView.getItems().clear();
         userEventOptionsBox.getChildren().clear();
-        userEventTitleLabel.setText("Select an event from the portfolio to view it's current state");
+        userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
 
         userNameLabelEvents.setText(details.name());
         userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
 
         portfolioTableView.getItems().addAll(details.portfolio());
-        activeUsername = details.name();
     }
 
     private void refreshUsersTab() {
@@ -826,16 +833,7 @@ public class MainController {
                 contentBox.getChildren().add(new Label("No trades recorded yet."));
             } else {
                 for (TradeRecordDTO trade : overview.userTradeHistory()) {
-                    String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
-                            trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
-                    Label tradeLabel = new Label(text);
-
-                    if (trade.action() == ActionType.BUY) {
-                        tradeLabel.getStyleClass().add("history-buy");
-                    } else {
-                        tradeLabel.getStyleClass().add("history-sell");
-                    }
-                    contentBox.getChildren().add(tradeLabel);
+                    contentBox.getChildren().add(createTradeLabel(trade));
                 }
             }
 
@@ -858,39 +856,85 @@ public class MainController {
     @FXML
     private void handleThemeChange() {
         String selectedTheme = themeSelector.getValue();
-        rootVBox.getStylesheets().clear();
 
-        try {
-            if (selectedTheme.equals("Dark Mode")) {
-                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/dark-theme.css").toExternalForm());
-            } else if (selectedTheme.equals("Ocean Blue")) {
-                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/ocean-theme.css").toExternalForm());
-            }
-            else if(selectedTheme.equals("Light Purple")) {
-                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/purple-theme.css").toExternalForm());
-            }
-            else {
-                rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
-            }
-        } catch (NullPointerException e) {
+        String cssPath;
+        if ("Dark Mode".equals(selectedTheme)) {
+            cssPath = "/ui/themes/dark-theme.css";
+        } else if ("Ocean Blue".equals(selectedTheme)) {
+            cssPath = "/ui/themes/ocean-theme.css";
+        } else if ("Light Purple".equals(selectedTheme)) {
+            cssPath = "/ui/themes/purple-theme.css";
+        } else {
+            cssPath = "/ui/themes/default-theme.css";
+        }
+
+        URL cssUrl = getClass().getResource(cssPath);
+        if (cssUrl == null) {
             System.out.println("Warning: CSS file not found for " + selectedTheme);
             // Fallback to default if the file is missing
-            rootVBox.getStylesheets().add(getClass().getResource("/ui/themes/default-theme.css").toExternalForm());
+            cssUrl = getClass().getResource("/ui/themes/default-theme.css");
+        }
+
+        // Only swap the stylesheet if we actually found one, so the current theme stays otherwise
+        if (cssUrl != null) {
+            rootVBox.getStylesheets().setAll(cssUrl.toExternalForm());
         }
     }
 
     private void attachClickAnimation(Button btn) {
-        ScaleTransition pressAnim = new ScaleTransition(Duration.millis(100), btn);
-        pressAnim.setToX(0.92);
-        pressAnim.setToY(0.92);
-        pressAnim.setAutoReverse(true);
-        pressAnim.setCycleCount(2);
+        ScaleTransition pressAnim = createPulseAnimation(btn, 100, 0.92);
+        btn.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> playIfEnabled(pressAnim));
+    }
 
-        btn.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, e -> {
-            if (animationsEnabled && pressAnim.getStatus() != Animation.Status.RUNNING) {
-                pressAnim.playFromStart();
+    // scales the node to the given size and back again
+    private ScaleTransition createPulseAnimation(Node node, int millis, double scale) {
+        ScaleTransition anim = new ScaleTransition(Duration.millis(millis), node);
+        anim.setFromX(1.0);
+        anim.setFromY(1.0);
+        anim.setToX(scale);
+        anim.setToY(scale);
+        anim.setAutoReverse(true);
+        anim.setCycleCount(2);
+        return anim;
+    }
+
+    private void playIfEnabled(ScaleTransition anim) {
+        if (animationsEnabled && anim.getStatus() != Animation.Status.RUNNING) {
+            anim.playFromStart();
+        }
+    }
+
+    // table row that shrinks slightly when pressed
+    private <T> TableRow<T> createAnimatedRow() {
+        TableRow<T> row = new TableRow<>();
+        ScaleTransition scaleAnim = createPulseAnimation(row, 100, 0.96);
+        row.setOnMousePressed(event -> {
+            if (!row.isEmpty()) {
+                playIfEnabled(scaleAnim);
             }
         });
+        return row;
+    }
+
+    // green label for buys, red label for sells
+    private Label createHistoryLabel(String text, boolean isBuy) {
+        Label label = new Label(text);
+        label.getStyleClass().add(isBuy ? "history-buy" : "history-sell");
+        return label;
+    }
+
+    private void addPendingRequestLabel(PendingRequestDTO req, String optionName, boolean isBuy) {
+        String text = String.format("[%s] User: %s | Option: %s | Amount: %d | Limit: $%.2f",
+                isBuy ? "BUY" : "SELL", req.username(), optionName, req.amount(), req.price());
+        Label reqLabel = createHistoryLabel(text, isBuy);
+        reqLabel.setMaxWidth(Double.MAX_VALUE);
+        participationsHistoryListView.getItems().add(reqLabel);
+    }
+
+    private Label createTradeLabel(TradeRecordDTO trade) {
+        String text = String.format("[%s] Option: %s | Amount: %d | Paid: $%.2f",
+                trade.action(), trade.optionName(), trade.amount(), trade.pricePaid());
+        return createHistoryLabel(text, trade.action() == ActionType.BUY);
     }
 
     /**
@@ -916,21 +960,7 @@ public class MainController {
             }
         });
 
-        usersTableView.setRowFactory(tv -> {
-            TableRow<UserSummaryDTO> row = new TableRow<>();
-            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
-            scaleAnim.setToX(0.96);
-            scaleAnim.setToY(0.96);
-            scaleAnim.setAutoReverse(true);
-            scaleAnim.setCycleCount(2);
-
-            row.setOnMousePressed(event -> {
-                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
-                    scaleAnim.playFromStart();
-                }
-            });
-            return row;
-        });
+        usersTableView.setRowFactory(tv -> createAnimatedRow());
     }
 
     private void setupPortfolioTable() {
@@ -951,20 +981,20 @@ public class MainController {
             }
         });
 
-        portfolioTableView.setRowFactory(tv -> {
-            TableRow<PortfolioItemDTO> row = new TableRow<>();
-            ScaleTransition scaleAnim = new ScaleTransition(Duration.millis(100), row);
-            scaleAnim.setToX(0.96);
-            scaleAnim.setToY(0.96);
-            scaleAnim.setAutoReverse(true);
-            scaleAnim.setCycleCount(2);
+        portfolioTableView.setRowFactory(tv -> createAnimatedRow());
 
-            row.setOnMousePressed(event -> {
-                if (!row.isEmpty() && animationsEnabled && scaleAnim.getStatus() != Animation.Status.RUNNING) {
-                    scaleAnim.playFromStart();
+        portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                // Find the event in allEvents
+                EventSummaryDTO selectedPortfolioEvent = allEvents.stream()
+                        .filter(e -> e.name().equals(newSelection.eventName()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (selectedPortfolioEvent != null) {
+                    populateUserEventOverview(selectedPortfolioEvent, activeUsername);
                 }
-            });
-            return row;
+            }
         });
     }
 
