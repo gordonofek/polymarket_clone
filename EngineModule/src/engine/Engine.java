@@ -405,6 +405,19 @@ public class Engine implements EngineInterface {
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
     }
 
+    public boolean isUserExists(String username) {
+        // הבדיקה מסתמכת על כך ש-getUser מחזיר null אם המשתמש לא נמצא במערכת
+        return this.userManager.getUser(username) != null;
+    }
+
+    public void addUser(String username) {
+        // יצירת משתמש חדש והוספתו לניהול.
+        // בתרגיל 3 משתמשים חדשים יכולים להטעין כסף עצמאית בהמשך, לכן התחלה עם מאזן 0 היא תקינה.
+        // *התאם את השורה הזו בהתאם למבנה המדויק של המחלקה User וה-UserManager שלך*
+        User newUser = new User(username);
+        this.userManager.addUser(newUser);
+    }
+
     @Override
     public UserEventOverviewDTO getUserEventOverview(String username, int eventId) {
         User user = userManager.getUser(username);
