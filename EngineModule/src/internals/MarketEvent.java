@@ -21,7 +21,7 @@ public class MarketEvent implements Event, Serializable {
     protected Map<String, Map<String, Integer>> participantsHoldings = new HashMap<>();
     protected String marketMaker;
 
-    public MarketEvent(int id, String name, String description, int commissionPercent,
+    public MarketEvent(String name, String description, int commissionPercent,
                          CommissionType commissionType, List<String> options, TradingMethods tradingMethod) {
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(commissionType, "CommissionType must not be null");
@@ -33,8 +33,6 @@ public class MarketEvent implements Event, Serializable {
             throw new IllegalArgumentException("commissionPercent must be between 0 and 90, right now it's " + commissionPercent);
         }
 
-
-        this.id = id;
         this.name = name;
         this.description = description;
         this.commissionPercent = commissionPercent;
@@ -44,9 +42,6 @@ public class MarketEvent implements Event, Serializable {
         this.status = EventStatus.NOT_STARTED;
         this.winningOption = null;
     }
-
-    @Override
-    public int getId() { return this.id; }
 
     @Override
     public String getName() { return this.name; }

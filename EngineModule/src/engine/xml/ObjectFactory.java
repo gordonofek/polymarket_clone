@@ -16,7 +16,7 @@ import jakarta.xml.bind.annotation.XmlRegistry;
 /**
  * This object contains factory methods for each 
  * Java content interface and Java element interface 
- * generated in the engine.xml package. 
+ * generated in the engine.jaxb.generated package. 
  * <p>An ObjectFactory allows you to programmatically 
  * construct new instances of the Java representation 
  * for XML content. The Java representation of XML 
@@ -30,13 +30,12 @@ import jakarta.xml.bind.annotation.XmlRegistry;
 @XmlRegistry
 public class ObjectFactory {
 
-    private static final QName _Id_QNAME = new QName("", "id");
     private static final QName _Description_QNAME = new QName("", "description");
     private static final QName _B_QNAME = new QName("", "b");
     private static final QName _GMOption_QNAME = new QName("", "GM-option");
 
     /**
-     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: engine.xml
+     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: engine.jaxb.generated
      * 
      */
     public ObjectFactory() {
@@ -113,16 +112,13 @@ public class ObjectFactory {
     }
 
     /**
-     * Create an instance of {@link JAXBElement }{@code <}{@link Integer }{@code >}
+     * Create an instance of {@link GMOrderBook }
      * 
-     * @param value
-     *     Java instance representing xml element's value.
      * @return
-     *     the new instance of {@link JAXBElement }{@code <}{@link Integer }{@code >}
+     *     the new instance of {@link GMOrderBook }
      */
-    @XmlElementDecl(namespace = "", name = "id")
-    public JAXBElement<Integer> createId(Integer value) {
-        return new JAXBElement<>(_Id_QNAME, Integer.class, null, value);
+    public GMOrderBook createGMOrderBook() {
+        return new GMOrderBook();
     }
 
     /**

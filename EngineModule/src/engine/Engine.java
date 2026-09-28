@@ -4,6 +4,7 @@ import internals.*;
 import engine.dto.*;
 import engine.files.FileHandler;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -21,16 +22,15 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public void loadDataFromXML(String filePath) throws Exception {
+    public void loadDataFromXML(InputStream fileContent) throws Exception {
         // creates a new XML_loader obj, and then load XML from filePath
         XMLDataLoader loader = new XMLDataLoader();
-        ParsedData data = loader.loadData(filePath);
+        List<Event> events = loader.loadData(fileContent);
 
         eventManager.clearEvents();
-        eventManager.addEventList(data.events());
+        eventManager.addEventList(events);
 
         userManager.clearUsers();
-        userManager.addUserList(data.users());
     }
 
     @Override
@@ -405,17 +405,10 @@ public class Engine implements EngineInterface {
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
     }
 
-    public boolean isUserExists(String username) {
-        // הבדיקה מסתמכת על כך ש-getUser מחזיר null אם המשתמש לא נמצא במערכת
-        return this.userManager.getUser(username) != null;
-    }
 
-    public void addUser(String username) {
-        // יצירת משתמש חדש והוספתו לניהול.
-        // בתרגיל 3 משתמשים חדשים יכולים להטעין כסף עצמאית בהמשך, לכן התחלה עם מאזן 0 היא תקינה.
-        // *התאם את השורה הזו בהתאם למבנה המדויק של המחלקה User וה-UserManager שלך*
-        User newUser = new User(username);
-        this.userManager.addUser(newUser);
+    public boolean addUser(String username) {
+        // ה-Engine פשוט מגלגל את הבקשה למנהל הרלוונטי
+        return this.userManager.addIfNotExists(username);
     }
 
     @Override

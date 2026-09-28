@@ -3,6 +3,7 @@ package engine;
 import engine.dto.*;
 import internals.ActionType;
 
+import java.io.InputStream;
 import java.util.List;
 
 public interface EngineInterface {
@@ -14,7 +15,7 @@ public interface EngineInterface {
     /**
      * טוען נתונים מקובץ XML ומרסט את המערכת.
      */
-    void loadDataFromXML(String filePath) throws Exception;
+    void loadDataFromXML(InputStream fileContent) throws Exception;
 
     /**
      * מחזיר true אם נטענו נתונים בהצלחה והמערכת מוכנה לעבודה.
@@ -83,7 +84,10 @@ public interface EngineInterface {
      */
     TradeReceiptDTO startEvent(String username, int eventId);
 
-
+    /**
+     * adds a new user when we login to the server(from part 3)
+     */
+    public boolean addUser(String username);
 
     // saves the current state of the program to bin file
     void saveState(String filePath);

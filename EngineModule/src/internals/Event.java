@@ -7,7 +7,6 @@ public interface Event {
 
     String getName();
     String getDescription();
-    int getId();
 
     // returns the commission percentage (0 to 90)
     int getCommissionPercent();

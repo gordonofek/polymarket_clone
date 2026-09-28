@@ -22,16 +22,19 @@ public class LoginServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // 3. לוגיקה מול המנוע (דוגמה גנרית, השתמש במתודות האמיתיות שלך)
-        if (engine.isUserExists(username)) {
+        boolean didAdd = engine.addUser(username);
+
+        if(didAdd)
+        {
+            // הוספת המשתמש למנוע
+            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+            response.getWriter().write("{\"success\": true, \"message\": \"Logged in successfully\"}");
+        }
+        else
+        {
             // החזרת שגיאה - המשתמש כבר קיים
             response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
             response.getWriter().write("{\"success\": false, \"message\": \"Username already exists\"}");
-        } else {
-            // הוספת המשתמש למנוע
-            engine.addUser(username);
-            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
-            response.getWriter().write("{\"success\": true, \"message\": \"Logged in successfully\"}");
         }
     }
 }
