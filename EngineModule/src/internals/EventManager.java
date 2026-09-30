@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public class EventManager implements Serializable {
-    private Map<Integer, Event> eventRegistry;
+    private Map<String, Event> eventRegistry;
 
     public EventManager()
     {
@@ -16,11 +16,11 @@ public class EventManager implements Serializable {
 
     // adds an event to the registry
     public void addEvent(Event event) {
-        if (this.eventRegistry.containsKey(event.getId()))
+        if (this.eventRegistry.containsKey(event.getName()))
         {
-            throw new IllegalArgumentException("Event with the id"+event.getId()+" already exists in the registry");
+            throw new IllegalArgumentException("Event with the id"+event.getName()+" already exists in the registry");
         }
-        this.eventRegistry.put(event.getId(),event);
+        this.eventRegistry.put(event.getName(),event);
     }
 
     // adds a list of events to registry
@@ -38,8 +38,8 @@ public class EventManager implements Serializable {
     }
 
     // gets the event by id
-    public Event getEvent(int id) {
-        return this.eventRegistry.get(id);
+    public Event getEvent(String name) {
+        return this.eventRegistry.get(name);
     }
 
     // checks if the event with the id is in the registry

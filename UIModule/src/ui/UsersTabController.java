@@ -102,7 +102,7 @@ public class UsersTabController {
         boolean isClosed = event.status().equals("CLOSED");
 
         // Fetch the compiled data from the Engine!
-        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.id());
+        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.name());
 
         VBox contentBox = new VBox(10);
 

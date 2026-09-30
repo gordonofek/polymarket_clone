@@ -40,7 +40,7 @@ public interface EngineInterface {
     /**
      * מחזיר את כל המידע המפורט עבור אירוע ספציפי (פקודה 3).
      */
-    EventDetailsDTO getEventState(int eventId);
+    EventDetailsDTO getEventState(String eventName);
 
     /**
      * returns the details of the user
@@ -50,7 +50,7 @@ public interface EngineInterface {
     /**
      *  returns the participants information for a specific event
      */
-    List<ParticipantHoldingDTO> getEventParticipants(int eventId);
+    List<ParticipantHoldingDTO> getEventParticipants(String eventName);
 
     /**
      * returns all the users
@@ -60,10 +60,10 @@ public interface EngineInterface {
     /**
      *  checks if the user is the market maker for this event
      */
-    boolean isUserMarketMaker(String username, int eventId);
+    boolean isUserMarketMaker(String username, String eventName);
 
     // gets the user's event info for the overview
-    UserEventOverviewDTO getUserEventOverview(String username, int eventId);
+    UserEventOverviewDTO getUserEventOverview(String username, String eventName);
 
     // ==========================================
     // ביצוע פעולות (Commands)
@@ -72,17 +72,17 @@ public interface EngineInterface {
     /**
      * מבצע פקודת מסחר (קנייה או מכירה) ומחזיר קבלה עם התוצאה (פקודה 4).
      */
-    TradeReceiptDTO placeOrder(String username, int eventId, String optionName, int amount, ActionType action, double limitPrice);
+    TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice);
 
     /**
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).
      */
-    CloseEventReceiptDTO closeEvent(int eventId, String winningOption);
+    CloseEventReceiptDTO closeEvent(String eventName, String winningOption);
 
     /**
      * opens the event. checks the cost, market maker's balance, deducts the money and distributes the starting shares for Order Book events.
      */
-    TradeReceiptDTO startEvent(String username, int eventId);
+    TradeReceiptDTO startEvent(String username, String eventName);
 
     /**
      * adds a new user when we login to the server(from part 3)

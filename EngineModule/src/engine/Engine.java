@@ -24,8 +24,8 @@ public class Engine implements EngineInterface {
     @Override
     public void loadDataFromXML(InputStream fileContent) throws Exception {
         // creates a new XML_loader obj, and then load XML from filePath
-        XMLDataLoader loader = new XMLDataLoader();
-        List<Event> events = loader.loadData(fileContent);
+        //XMLDataLoader loader = new XMLDataLoader();
+        List<Event> events = XMLDataLoader.loadData(fileContent);
 
         eventManager.clearEvents();
         eventManager.addEventList(events);
@@ -44,7 +44,6 @@ public class Engine implements EngineInterface {
         // and then putting it in a list and returning it
         return eventManager.getAllEvents().stream()
                 .map(event -> new EventSummaryDTO(
-                        event.getId(),
                         event.getName(),
                         event.getDescription(),
                         event.getStatus().name(), // Converts the EventStatus enum to a String
@@ -66,7 +65,6 @@ public class Engine implements EngineInterface {
             // Only process the event if its status is OPEN
             if (event.getStatus() == EventStatus.OPEN) {
                 EventSummaryDTO dto = new EventSummaryDTO(
-                        event.getId(),
                         event.getName(),
                         event.getDescription(),
                         event.getStatus().name(), // Converts the EventStatus enum to a String
@@ -83,9 +81,9 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public EventDetailsDTO getEventState(int eventId) {
+    public EventDetailsDTO getEventState(String eventName) {
         // 1. Fetch the raw domain object from your data structure
-        Event event = eventManager.getEvent(eventId);
+        Event event = eventManager.getEvent(eventName);
 
         // 2. Stream to calculate the total commission from the history
         double totalCommission = event.getTradeHistory().stream()
@@ -151,7 +149,6 @@ public class Engine implements EngineInterface {
 
         // 6. Finally, return the new object using the constructor
         return new EventDetailsDTO(
-                event.getId(),
                 event.getName(),
                 event.getStatus().name(),
                 event.getPoolValue(),
@@ -163,9 +160,9 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public List<ParticipantHoldingDTO> getEventParticipants(int eventId)
+    public List<ParticipantHoldingDTO> getEventParticipants(String eventName)
     {
-        Event event = eventManager.getEvent(eventId);
+        Event event = eventManager.getEvent(eventName);
         Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
 
         List<ParticipantHoldingDTO> holdings = ledger.entrySet().stream()
@@ -180,8 +177,8 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public TradeReceiptDTO placeOrder(String username, int eventId, String optionName, int amount, ActionType action, double limitPrice) {
-        Event event = eventManager.getEvent(eventId);
+    public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) {
+        Event event = eventManager.getEvent(eventName);
         User initiatingUser = userManager.getUser(username);
 
         // check if the user went into negative balance, if yes then he is blocked and thus can't trade.
@@ -222,20 +219,20 @@ public class Engine implements EngineInterface {
             if (involvedUser != null) {
                 if (res.action() == ActionType.BUY) {
                     involvedUser.deductFunds(res.totalCost());
-                    involvedUser.addShares(eventId, res.optionName(), res.sharesProcessed());
+                    involvedUser.addShares(eventName, res.optionName(), res.sharesProcessed());
                     event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
 
                     // Track Portfolio Data
-                    involvedUser.addCommissionPaid(eventId, res.commissionPaid());
-                    involvedUser.addOptionInvestment(eventId, res.optionName(), res.totalCost());
+                    involvedUser.addCommissionPaid(eventName, res.commissionPaid());
+                    involvedUser.addOptionInvestment(eventName, res.optionName(), res.totalCost());
 
                 } else if (res.action() == ActionType.SELL) {
                     involvedUser.addFunds(res.totalCost());
-                    involvedUser.addShares(eventId, res.optionName(), -res.sharesProcessed());
+                    involvedUser.addShares(eventName, res.optionName(), -res.sharesProcessed());
                     event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
 
                     // Track Portfolio Data
-                    involvedUser.addOptionInvestment(eventId, res.optionName(), -res.totalCost());
+                    involvedUser.addOptionInvestment(eventName, res.optionName(), -res.totalCost());
                 }
 
                 // 5. Accumulate the costs/commissions ONLY for the user who initiated the request
@@ -260,8 +257,8 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public TradeReceiptDTO startEvent(String username, int eventId) {
-        Event event = eventManager.getEvent(eventId);
+    public TradeReceiptDTO startEvent(String username, String eventName) {
+        Event event = eventManager.getEvent(eventName);
         User user = userManager.getUser(username);
 
         if (event.getStatus() != EventStatus.NOT_STARTED) {
@@ -290,7 +287,7 @@ public class Engine implements EngineInterface {
         // granting the market maker the initial order book shares for EVERY option
         if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
             for (String optionName : event.getOptions()) {
-                user.addShares(eventId, optionName, sharesToGive);
+                user.addShares(eventName, optionName, sharesToGive);
                 event.recordParticipant(username, optionName, sharesToGive);
             }
         }
@@ -298,10 +295,10 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public CloseEventReceiptDTO closeEvent(int eventId, String winningOption) {
+    public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) {
         try {
             // fetch the event
-            Event event = eventManager.getEvent(eventId);
+            Event event = eventManager.getEvent(eventName);
 
             // close the event and get the results
             CloseMarketResult res = event.resolveEvent(winningOption);
@@ -312,7 +309,7 @@ public class Engine implements EngineInterface {
             if (marketMaker != null) {
                 double mmPayout = res.commissionTaken() + res.leftoverSubsidy();
                 marketMaker.addFunds(mmPayout);
-                marketMaker.addPayoutReceived(eventId, mmPayout);
+                marketMaker.addPayoutReceived(eventName, mmPayout);
             }
 
             // pay the winners
@@ -334,8 +331,8 @@ public class Engine implements EngineInterface {
                         double userPayout = userWinningShares * payoutPerShare;
                         double userCommission = userWinningShares * commissionPerShare;
                         winner.addFunds(userPayout);
-                        winner.addPayoutReceived(eventId, userPayout);
-                        winner.addCommissionPaid(eventId, userCommission);
+                        winner.addPayoutReceived(eventName, userPayout);
+                        winner.addCommissionPaid(eventName, userCommission);
                     }
                 }
             }
@@ -376,11 +373,10 @@ public class Engine implements EngineInterface {
         }
         List<PortfolioItemDTO> portfolio = new ArrayList<>();
         if (user.getPortfolio() != null) {
-            for (Map.Entry<Integer, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
-                int eventId = eventEntry.getKey();
+            for (Map.Entry<String, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
+                String eventName = eventEntry.getKey();
 
-                Event event = this.eventManager.getEvent(eventId);
-                String eventName = (event != null) ? event.getName() : "Unknown Event";
+                Event event = this.eventManager.getEvent(eventName);
 
                 for (Map.Entry<String, Integer> optionEntry : eventEntry.getValue().entrySet()) {
                     String optionName = optionEntry.getKey();
@@ -393,7 +389,7 @@ public class Engine implements EngineInterface {
                         // Calculate Profil/Loss if closed, or show 0.0 if still open
                         double profitLoss = 0.0;
                         if (event != null && event.getStatus() == EventStatus.CLOSED) {
-                            UserEventOverviewDTO overview = getUserEventOverview(user.getName(), eventId);
+                            UserEventOverviewDTO overview = getUserEventOverview(user.getName(), eventName);
                             profitLoss = overview.profitLoss();
                         }
 
@@ -412,16 +408,16 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public UserEventOverviewDTO getUserEventOverview(String username, int eventId) {
+    public UserEventOverviewDTO getUserEventOverview(String username, String eventName) {
         User user = userManager.getUser(username);
-        Event event = eventManager.getEvent(eventId);
+        Event event = eventManager.getEvent(eventName);
 
-        double commission = user.getCommissionPaidForEvent(eventId);
-        double payout = user.getPayoutForEvent(eventId);
+        double commission = user.getCommissionPaidForEvent(eventName);
+        double payout = user.getPayoutForEvent(eventName);
 
         // calculates total investment for this event
         double totalInvestment = 0.0;
-        Map<String, Double> investments = user.getOptionInvestments().getOrDefault(eventId, new java.util.HashMap<>());
+        Map<String, Double> investments = user.getOptionInvestments().getOrDefault(eventName, new java.util.HashMap<>());
         for (double amount : investments.values()) {
             totalInvestment += amount;
         }
@@ -446,10 +442,10 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public boolean isUserMarketMaker(String username, int eventId) {
+    public boolean isUserMarketMaker(String username, String eventName) {
         if (username == null) return false;
         User user = this.userManager.getUser(username);
-        return user != null && user.isMarketMakerFor(eventId); // Using the method you already wrote!
+        return user != null && user.isMarketMakerFor(eventName); // Using the method you already wrote!
     }
 
     @Override

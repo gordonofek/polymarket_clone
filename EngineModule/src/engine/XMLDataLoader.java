@@ -22,9 +22,6 @@ public class XMLDataLoader {
 public static List<Event> loadData(InputStream fileContent) throws Exception {
     GuessMarket guessMarket = loadGuessMarket (fileContent);
 
-    // 2. יצירת מאגר ה-IDs שישמש לתקשורת בין הפונקציות
-    Set<Integer> validEventIds = new HashSet<>();
-
     // 3. הפעלת שרשרת הפונקציות
     List<Event> engineEvents = parseEvents(guessMarket);
 
@@ -61,6 +58,9 @@ private static List<Event> parseEvents(GuessMarket guessMarket) throws InvalidXM
     // 2. וולידציה והמרה לאובייקטי מנוע
     List<Event> engineEvents = new ArrayList<>();
 
+    // סט לאחסון שמות אירועים שכבר קראנו, כדי למצוא כפילויות
+    Set<String> uniqueEventNames = new HashSet<>();
+
     // מעבר על רשימת האירועים ש-JAXB יצר
     for (GMEvent xmlEvent : guessMarket.getGMEvents().getGMEvent()) {
 
@@ -68,6 +68,13 @@ private static List<Event> parseEvents(GuessMarket guessMarket) throws InvalidXM
         String fullEventName = String.join(" ", xmlEvent.getName());
 
         // --- וולידציה (Application-wise) ---
+
+        // --- וולידציה של שמות כפולים ---
+        if (uniqueEventNames.contains(fullEventName)) {
+            throw new InvalidXMLException("Duplicate event name found in XML: '" + fullEventName + "'. Event names must be unique.");
+        }
+        uniqueEventNames.add(fullEventName);
+
 
         // בדיקת עמלה בין 0 ל-90
         int commission = xmlEvent.getCommission().getValue();

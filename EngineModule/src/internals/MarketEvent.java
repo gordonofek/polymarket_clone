@@ -7,7 +7,6 @@ import java.util.*;
  *  a base implementation of the Event interface.
  */
 public class MarketEvent implements Event, Serializable {
-    protected int id;
     protected String name;
     protected String description;
     protected int commissionPercent;

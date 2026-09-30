@@ -27,7 +27,7 @@ public class FileUploadServlet extends HttpServlet {
             Engine engine = (Engine) getServletContext().getAttribute("engine");
 
             // תצטרך לוודא שהפונקציה שלך במנוע יודעת לקבל InputStream במקום נתיב לקובץ
-            engine.loadEventsFromXml(fileContent);
+            engine.loadDataFromXML(fileContent);
 
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().write("{\"success\": true, \"message\": \"File loaded successfully\"}");

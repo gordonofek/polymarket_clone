@@ -11,20 +11,20 @@ public class User {
     // in case a user goes negative balance we should allow that, but also block the user
     private boolean isBlocked = false;
 
-    // Event ID -> (Option Name -> Amount of Shares Owned)
-    private Map<Integer, Map<String, Integer>> portfolio;
+    // Event name -> (Option Name -> Amount of Shares Owned)
+    private Map<String, Map<String, Integer>> portfolio;
 
-    // Tracks the id's of the events this user is a market maker for
-    private Set<Integer> managedEvents = new HashSet<>();
+    // Tracks the name's of the events this user is a market maker for
+    private Set<String> managedEvents = new HashSet<>();
 
-    // Event id -> Total commission paid
-    private Map<Integer, Double> commissionsPaid = new HashMap<>();
+    // Event name -> Total commission paid
+    private Map<String, Double> commissionsPaid = new HashMap<>();
 
-    // Event id -> (Option Name -> Total Money Spent)
-    private Map<Integer, Map<String, Double>> optionInvestments = new HashMap<>();
+    // Event name -> (Option Name -> Total Money Spent)
+    private Map<String, Map<String, Double>> optionInvestments = new HashMap<>();
 
-    // Event id -> Total Payout received (used for profit/loss)
-    private Map<Integer, Double> payoutsReceived = new HashMap<>();
+    // Event name -> Total Payout received (used for profit/loss)
+    private Map<String, Double> payoutsReceived = new HashMap<>();
 
     public User(String name) {
         this.name = name;
@@ -32,7 +32,7 @@ public class User {
         this.portfolio = new HashMap<>();
     }
 
-    public User(String name, double balance, Set<Integer> managedEvents) {
+    public User(String name, double balance, Set<String> managedEvents) {
         this.name = name;
         this.balance = balance;
         this.managedEvents = managedEvents;
@@ -41,7 +41,7 @@ public class User {
 
     public String getName() {return name;}
     public double getBalance() {return balance;}
-    public Map<Integer, Map<String, Integer>> getPortfolio() {return this.portfolio;}
+    public Map<String, Map<String, Integer>> getPortfolio() {return this.portfolio;}
 
     public void addFunds(double amount) {
         this.balance += amount;
@@ -59,55 +59,55 @@ public class User {
         }
     }
 
-    public void addShares(int eventId, String optionName, int amount) {
-        portfolio.putIfAbsent(eventId, new HashMap<>());
-        Map<String, Integer> eventShares = portfolio.get(eventId);
+    public void addShares(String eventName, String optionName, int amount) {
+        portfolio.putIfAbsent(eventName, new HashMap<>());
+        Map<String, Integer> eventShares = portfolio.get(eventName);
         eventShares.put(optionName, eventShares.getOrDefault(optionName, 0) + amount);
     }
 
-    public void addCommissionPaid(int eventId, double amount) {
-        commissionsPaid.put(eventId, commissionsPaid.getOrDefault(eventId, 0.0) + amount);
+    public void addCommissionPaid(String eventName, double amount) {
+        commissionsPaid.put(eventName, commissionsPaid.getOrDefault(eventName, 0.0) + amount);
     }
 
-    public void addOptionInvestment(int eventId, String optionName, double amount) {
-        optionInvestments.putIfAbsent(eventId, new HashMap<>());
-        Map<String, Double> eventInvestments = optionInvestments.get(eventId);
+    public void addOptionInvestment(String eventName, String optionName, double amount) {
+        optionInvestments.putIfAbsent(eventName, new HashMap<>());
+        Map<String, Double> eventInvestments = optionInvestments.get(eventName);
         eventInvestments.put(optionName, eventInvestments.getOrDefault(optionName, 0.0) + amount);
     }
 
-    public void addPayoutReceived(int eventId, double amount) {
-        payoutsReceived.put(eventId, payoutsReceived.getOrDefault(eventId, 0.0) + amount);
+    public void addPayoutReceived(String eventName, double amount) {
+        payoutsReceived.put(eventName, payoutsReceived.getOrDefault(eventName, 0.0) + amount);
     }
 
-    public void addManagedEvent(int eventId) {
-        this.managedEvents.add(eventId);
+    public void addManagedEvent(String eventName) {
+        this.managedEvents.add(eventName);
     }
 
-    public boolean isMarketMakerFor(int eventId) {
-        return this.managedEvents.contains(eventId);
+    public boolean isMarketMakerFor(String eventName) {
+        return this.managedEvents.contains(eventName);
     }
 
     public boolean isBlocked() {
         return this.isBlocked;
     }
 
-    public Set<Integer> getManagedEvents() {
+    public Set<String> getManagedEvents() {
         return managedEvents;
     }
 
-    public double getCommissionPaidForEvent(int eventId) {
-        return commissionsPaid.getOrDefault(eventId, 0.0);
+    public double getCommissionPaidForEvent(String eventName) {
+        return commissionsPaid.getOrDefault(eventName, 0.0);
     }
 
-    public double getInvestmentForOption(int eventId, String optionName) {
-        return optionInvestments.getOrDefault(eventId, new HashMap<>()).getOrDefault(optionName, 0.0);
+    public double getInvestmentForOption(String eventName, String optionName) {
+        return optionInvestments.getOrDefault(eventName, new HashMap<>()).getOrDefault(optionName, 0.0);
     }
 
-    public double getPayoutForEvent(int eventId) {
-        return payoutsReceived.getOrDefault(eventId, 0.0);
+    public double getPayoutForEvent(String eventName) {
+        return payoutsReceived.getOrDefault(eventName, 0.0);
     }
 
-    public Map<Integer, Map<String, Double>> getOptionInvestments() {
+    public Map<String, Map<String, Double>> getOptionInvestments() {
         return this.optionInvestments;
     }
 }
