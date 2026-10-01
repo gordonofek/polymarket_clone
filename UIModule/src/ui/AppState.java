@@ -38,6 +38,8 @@ public class AppState {
         return activeUser.get();
     }
 
+
+
     public void setActiveUser(String username) {
         activeUser.set(username);
     }

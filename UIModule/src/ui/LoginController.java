@@ -1,11 +1,19 @@
 package ui;
 
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-
 import java.util.function.Consumer;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import javafx.application.Platform;
 
 /**
  * Controller for the login screen (login.fxml).
@@ -79,11 +87,52 @@ public class LoginController {
     private void sendLoginRequest(String username) {
         setBlock(true);
 
-        // no server yet so every login succeeds
+        Task<Boolean> loginTask = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                // פעולות רשת כבדות מתבצעות כאן ברקע
+                String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+                String formData = "username=" + encodedUsername;
 
-        setBlock(false);
-        if (onLoginSuccess != null) {
-            onLoginSuccess.accept(username);
-        }
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create("http://localhost:8080/login"))
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(formData))
+                        .build();
+
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                if (response.statusCode() == 200) {
+                    return true; // מחזיר הצלחה
+                } else {
+                    // זריקת חריגה כאן תעביר אותנו אוטומטית ל-setOnFailed
+                    throw new Exception(response.body());
+                }
+            }
+        };
+
+        // מתבצע אוטומטית על ה-Thread של ממשק המשתמש (UI) במקרה של הצלחה
+        loginTask.setOnSucceeded(event -> {
+            setBlock(false);
+            if (onLoginSuccess != null) {
+                onLoginSuccess.accept(username);
+            }
+        });
+
+        // מתבצע אוטומטית על ה-Thread של ממשק המשתמש במקרה של כישלון (חריגה ב-call)
+        loginTask.setOnFailed(event -> {
+            setBlock(false);
+            Throwable exception = loginTask.getException();
+
+            if (exception instanceof java.net.ConnectException) {
+                showError("Can't reach the server. Is Tomcat running?");
+            } else {
+                showError("Login failed: " + exception.getMessage());
+            }
+        });
+
+        // הרצת המשימה
+        new Thread(loginTask).start();
     }
 }

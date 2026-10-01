@@ -11,19 +11,17 @@ import java.io.InputStream;
 import java.io.IOException;
 
 @WebServlet(name = "FileUploadServlet", urlPatterns = "/FileUpload")
-@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
+//@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
+
 public class FileUploadServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
-            // 1. קבלת הקובץ מתוך הבקשה (השם "xmlFile" חייב להיות תואם לשם שיישלח מהלקוח)
-            Part filePart = request.getPart("xmlFile");
+            // getting the InputStream from the request using built in function
+            InputStream fileContent = request.getInputStream();
 
-            // 2. קריאת הקובץ ישירות לזיכרון כ-Stream (אסור לשמור לדיסק!)
-            InputStream fileContent = filePart.getInputStream();
-
-            // 3. שליפת המנוע והעברת ה-Stream ישירות לפונקציית הטעינה שלך
+            //  שליפת המנוע והעברת ה-Stream ישירות לפונקציית הטעינה שלך
             Engine engine = (Engine) getServletContext().getAttribute("engine");
 
             // תצטרך לוודא שהפונקציה שלך במנוע יודעת לקבל InputStream במקום נתיב לקובץ

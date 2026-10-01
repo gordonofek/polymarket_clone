@@ -100,7 +100,7 @@ public class MainController {
 
                     // 2. בניית הבקשה. שים לב שאנחנו שמים את הקובץ ישירות ב-Body!
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:8080/FileUploadServlet")) // ודא שזו הכתובת הנכונה
+                            .uri(URI.create("http://localhost:8080/FileUpload")) // ודא שזו הכתובת הנכונה
                             .header("Content-Type", "application/xml") // השרת ידע שזה XML
                             .POST(HttpRequest.BodyPublishers.ofFile(selectedFile.toPath()))
                             .build();
