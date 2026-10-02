@@ -89,7 +89,8 @@ public class LoginController {
 
         Task<Boolean> loginTask = new Task<>() {
             @Override
-            protected Boolean call() throws Exception {
+            protected Boolean call() throws Exception
+            {
                 // פעולות רשת כבדות מתבצעות כאן ברקע
                 String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
                 String formData = "username=" + encodedUsername;
@@ -113,7 +114,8 @@ public class LoginController {
         };
 
         // מתבצע אוטומטית על ה-Thread של ממשק המשתמש (UI) במקרה של הצלחה
-        loginTask.setOnSucceeded(event -> {
+        loginTask.setOnSucceeded(event ->
+        {
             setBlock(false);
             if (onLoginSuccess != null) {
                 onLoginSuccess.accept(username);
@@ -121,7 +123,8 @@ public class LoginController {
         });
 
         // מתבצע אוטומטית על ה-Thread של ממשק המשתמש במקרה של כישלון (חריגה ב-call)
-        loginTask.setOnFailed(event -> {
+        loginTask.setOnFailed(event ->
+        {
             setBlock(false);
             Throwable exception = loginTask.getException();
 
