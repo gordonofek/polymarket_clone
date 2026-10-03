@@ -3,7 +3,6 @@ package engine.dto;
 import java.util.List;
 
 public record EventDetailsDTO(
-        int id,
         String name,
         String status,
         double poolValue, // מצב חשבון האירוע הנוכחי

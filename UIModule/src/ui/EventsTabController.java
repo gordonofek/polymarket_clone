@@ -18,6 +18,7 @@ import javafx.animation.ScaleTransition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
@@ -135,7 +136,7 @@ public class EventsTabController {
     }
 
     private GridPane createEventTile(EventSummaryDTO eventSummary) {
-        EventDetailsDTO details = engine.getEventState(eventSummary.id());
+        EventDetailsDTO details = engine.getEventState(eventSummary.name());
 
         GridPane tile = new GridPane();
         tile.getStyleClass().add("event-tile");
@@ -148,7 +149,7 @@ public class EventsTabController {
         tile.getColumnConstraints().addAll(col1, col2);
 
         // id, trading method, status
-        Label idLabel = new Label("#" + eventSummary.id());
+        Label idLabel = new Label("#" + eventSummary.name());
         idLabel.getStyleClass().add("event-id-label");
 
         String methodStr = eventSummary.tradingMethodType();
@@ -237,7 +238,7 @@ public class EventsTabController {
 
         boolean isOrderBook = eventSummary.tradingMethodType().contains("ORDER_BOOK");
 
-        detailIdLabel.setText("#" + eventSummary.id());
+        detailIdLabel.setText("#" + eventSummary.name());
 
         String methodStr = eventSummary.tradingMethodType();
         detailMethodLabel.setText(methodStr.replace("_", " "));
@@ -255,8 +256,8 @@ public class EventsTabController {
 
         optionsContainer.getChildren().clear();
 
-        EventDetailsDTO historyDetails = engine.getEventState(eventSummary.id());
-        List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.id());
+        EventDetailsDTO historyDetails = engine.getEventState(eventSummary.name());
+        List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.name());
 
         if (historyTitleLabel != null) {
             historyTitleLabel.setText(isOrderBook ? "Order Book Queue" : "Participation History");
@@ -391,7 +392,7 @@ public class EventsTabController {
         }
         updatePriceGraph(historyDetails);
 
-        boolean isMarketMaker = engine.isUserMarketMaker(state.getActiveUser(), eventSummary.id());
+        boolean isMarketMaker = engine.isUserMarketMaker(state.getActiveUser(), eventSummary.name());
         String status = eventSummary.status();
         mmControlsBox.setVisible(isMarketMaker);
         mmControlsBox.setManaged(isMarketMaker);
@@ -419,7 +420,7 @@ public class EventsTabController {
     private void handleStartEventAction() {
         if (selectedEvent == null || state.getActiveUser() == null) return;
 
-        TradeReceiptDTO receipt = engine.startEvent(state.getActiveUser(), selectedEvent.id());
+        TradeReceiptDTO receipt = engine.startEvent(state.getActiveUser(), selectedEvent.name());
 
         if (receipt.isSuccess()) {
             showAlert(Alert.AlertType.INFORMATION, "Event Started", String.format("Event successfully opened!\nCost deducted: $%.2f", receipt.totalCost()));
@@ -435,7 +436,7 @@ public class EventsTabController {
     private void handleCloseEventAction() {
         if (selectedEvent == null || state.getActiveUser() == null) return;
 
-        EventDetailsDTO details = engine.getEventState(selectedEvent.id());
+        EventDetailsDTO details = engine.getEventState(selectedEvent.name());
         List<String> optionNames = new ArrayList<>();
         for (OptionDetailsDTO option : details.options()) {
             optionNames.add(option.optionName());
@@ -448,7 +449,7 @@ public class EventsTabController {
         styleDialog(dialog);
 
         dialog.showAndWait().ifPresent(winningOption -> {
-            CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.id(), winningOption);
+            CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.name(), winningOption);
 
             if (receipt.isSuccess()) {
                 String msg = String.format("Event Closed!\nWinner: %s\nTotal Payout: $%.2f\nCommission Taken: $%.2f\nReturned to MM: $%.2f",
@@ -466,7 +467,7 @@ public class EventsTabController {
     {
         this.allEvents = engine.getAllEvents();
         for (EventSummaryDTO event : this.allEvents) {
-            if (event.id() == selectedEvent.id()) {
+            if (Objects.equals(event.name(), selectedEvent.name())) {
                 this.selectedEvent = event;
                 break;
             }
@@ -545,7 +546,7 @@ public class EventsTabController {
                 }
 
                 // Send the trade to the engine
-                TradeReceiptDTO receipt = engine.placeOrder(state.getActiveUser() ,event.id(), optionName, amount, action, priceLimit);
+                TradeReceiptDTO receipt = engine.placeOrder(state.getActiveUser() ,event.name(), optionName, amount, action, priceLimit);
 
                 if (receipt.isSuccess()) {
                     successfulReceipt[0] = receipt;

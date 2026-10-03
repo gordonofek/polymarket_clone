@@ -12,6 +12,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 
 /**
@@ -74,8 +78,7 @@ public class MainController {
     }
 
     @FXML
-    private void handleOpenFile()
-    {
+    private void handleOpenFile() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Guess Market XML File");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("XML Files", "*.xml"));
@@ -84,60 +87,57 @@ public class MainController {
         File selectedFile = fileChooser.showOpenDialog(stage);
 
         if (selectedFile != null) {
-            String filePath = selectedFile.getAbsolutePath();
-
             loadFileBtn.setDisable(true);
-            filePathField.setText("Loading: " + filePath);
-
+            filePathField.setText("Uploading to server...");
             progressBar.setVisible(true);
 
-            Task<List<EventSummaryDTO>> loadTask = new Task<>() {
+            // אנחנו יוצרים Task כדי שבקשת הרשת לא תתקע את המסך הגרפי
+            Task<Boolean> uploadTask = new Task<>() {
                 @Override
-                protected List<EventSummaryDTO> call() throws Exception {
-                    int totalSteps = 20;
-                    for (int i = 1; i <= totalSteps; i++)
-                    {
-                        Thread.sleep(100);
-                        updateProgress(i, totalSteps);
+                protected Boolean call() throws Exception {
+                    // 1. יצירת לקוח HTTP
+                    HttpClient client = HttpClient.newHttpClient();
+
+                    // 2. בניית הבקשה. שים לב שאנחנו שמים את הקובץ ישירות ב-Body!
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:8080/FileUpload")) // ודא שזו הכתובת הנכונה
+                            .header("Content-Type", "application/xml") // השרת ידע שזה XML
+                            .POST(HttpRequest.BodyPublishers.ofFile(selectedFile.toPath()))
+                            .build();
+
+                    // 3. שליחת הבקשה והמתנה לתשובה מהשרת
+                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                    // 4. בדיקה האם השרת החזיר קוד 200 (הצלחה) או שגיאה
+                    if (response.statusCode() == 200) {
+                        return true;
+                    } else {
+                        // אם יש שגיאה (למשל כפילות בשם או XML לא תקין), נזרוק את הודעת השגיאה שהשרת החזיר
+                        throw new Exception(response.body());
                     }
-                    engine.loadDataFromXML(filePath);
-                    return engine.getAllEvents();
                 }
             };
-            progressBar.progressProperty().bind(loadTask.progressProperty());
 
-            loadTask.setOnSucceeded(e-> {
-                progressBar.setVisible(false);
-
-                loadFileBtn.setDisable(false);
-                filePathField.setText(filePath);
-
-                List<EventSummaryDTO> loadedEvents = loadTask.getValue();
-
-                loadData(loadedEvents);
-
-
-                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                successAlert.setTitle("Success");
-                successAlert.setHeaderText(null);
-                successAlert.setContentText("File loaded successfully into Guess Market");
-                successAlert.showAndWait();
-            });
-
-            loadTask.setOnFailed(e-> {
+            // מה לעשות אם ההעלאה הצליחה
+            uploadTask.setOnSucceeded(e -> {
                 progressBar.setVisible(false);
                 loadFileBtn.setDisable(false);
-                filePathField.setText("Error loading file.");
+                filePathField.setText("Loaded: " + selectedFile.getName());
 
-                Throwable exception = loadTask.getException();
-
-                Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                errorAlert.setTitle("Loading Error");
-                errorAlert.setHeaderText("Failed to load the XML file");
-                errorAlert.setContentText(exception.getMessage());
-                errorAlert.showAndWait();
+                // כאן תוכל להקפיץ Alert של הצלחה ולרענן את רשימת האירועים במסך!
             });
-            new Thread(loadTask).start();
+
+            // מה לעשות אם ההעלאה נכשלה
+            uploadTask.setOnFailed(e -> {
+                progressBar.setVisible(false);
+                loadFileBtn.setDisable(false);
+                filePathField.setText("Upload failed");
+
+                // כאן תוכל להקפיץ Alert של שגיאה עם הטקסט: uploadTask.getException().getMessage()
+            });
+
+            // הפעלת ה-Task בת'רד נפרד
+            new Thread(uploadTask).start();
         }
     }
 

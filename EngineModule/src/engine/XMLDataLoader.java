@@ -1,11 +1,9 @@
 package engine;
 
 import engine.xml.GMEvent;
-import engine.xml.GMUser;
 import engine.xml.GuessMarket;
 import internals.*;
 import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
 
 import javax.xml.parsers.SAXParserFactory;
@@ -15,33 +13,23 @@ import org.xml.sax.XMLReader;
 import java.io.FileReader;
 
 import java.io.File;
+import java.io.InputStream;
 import java.util.*;
 
 public class XMLDataLoader {
 
 
-public static ParsedData loadData(String filePath) throws Exception {
-    GuessMarket guessMarket = loadGuessMarket (filePath);
-
-    // 2. יצירת מאגר ה-IDs שישמש לתקשורת בין הפונקציות
-    Set<Integer> validEventIds = new HashSet<>();
+public static List<Event> loadData(InputStream fileContent) throws Exception {
+    GuessMarket guessMarket = loadGuessMarket (fileContent);
 
     // 3. הפעלת שרשרת הפונקציות
-    List<Event> engineEvents = parseEvents(guessMarket, validEventIds);
-    List<User> engineUsers = parseUsers(guessMarket, validEventIds);
-    validateMarketMakers(engineEvents, engineUsers);
+    List<Event> engineEvents = parseEvents(guessMarket);
 
-    // 4. החזרת התוצאה הארוזה
-    return new ParsedData(engineEvents, engineUsers);
+    return engineEvents;
 }
 
-public static GuessMarket loadGuessMarket (String filePath) throws Exception{
-    // 1. Unmarshalling: המרת ה-XML לאובייקטים בעזרת JAXB
-    File file = new File(filePath);
-    if (!file.exists() || !file.getName().endsWith(".xml")) {
-        throw new InvalidXMLException("The file does not exist or is not an XML file.");
-    }
 
+public static GuessMarket loadGuessMarket (InputStream fileContent) throws Exception{
     // creates context of the structure GuessMarket
     JAXBContext context = JAXBContext.newInstance(GuessMarket.class);
 
@@ -58,7 +46,7 @@ public static GuessMarket loadGuessMarket (String filePath) throws Exception{
     XMLReader xmlReader = spf.newSAXParser().getXMLReader();
 
     // creates a source based on the file we checked and the xmlReader we created
-    SAXSource source = new SAXSource(xmlReader, new InputSource(new FileReader(file)));
+    SAXSource source = new SAXSource(xmlReader, new InputSource(fileContent));
 
     // Unmarshal GuessMarket based on xmlReader parser
     GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(source);
@@ -66,9 +54,12 @@ public static GuessMarket loadGuessMarket (String filePath) throws Exception{
     return guessMarket;
 }
 
-private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> validEventIds) throws InvalidXMLException{
+private static List<Event> parseEvents(GuessMarket guessMarket) throws InvalidXMLException{
     // 2. וולידציה והמרה לאובייקטי מנוע
     List<Event> engineEvents = new ArrayList<>();
+
+    // סט לאחסון שמות אירועים שכבר קראנו, כדי למצוא כפילויות
+    Set<String> uniqueEventNames = new HashSet<>();
 
     // מעבר על רשימת האירועים ש-JAXB יצר
     for (GMEvent xmlEvent : guessMarket.getGMEvents().getGMEvent()) {
@@ -78,10 +69,12 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
 
         // --- וולידציה (Application-wise) ---
 
-        // בדיקת ID ייחודי
-        if (!validEventIds.add(xmlEvent.getId())) {
-            throw new InvalidXMLException("Duplicate Event ID found: " + xmlEvent.getId());
+        // --- וולידציה של שמות כפולים ---
+        if (uniqueEventNames.contains(fullEventName)) {
+            throw new InvalidXMLException("Duplicate event name found in XML: '" + fullEventName + "'. Event names must be unique.");
         }
+        uniqueEventNames.add(fullEventName);
+
 
         // בדיקת עמלה בין 0 ל-90
         int commission = xmlEvent.getCommission().getValue();
@@ -134,7 +127,6 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
 
         // ג. יצירת האירוע האמיתי של המנוע
         Event newEvent = new MarketEvent(
-                xmlEvent.getId(),
                 fullEventName,
                 xmlEvent.getDescription(),
                 commission,
@@ -145,79 +137,6 @@ private static List<Event> parseEvents(GuessMarket guessMarket, Set<Integer> val
         engineEvents.add(newEvent);
     }
     return engineEvents;
-}
-
-private static List<User> parseUsers(GuessMarket guessMarket, Set<Integer> validEventIds) throws InvalidXMLException{
-    List<User> engineUsers = new ArrayList<>();
-    Set<String> existingNames = new HashSet<>();
-
-    // ייתכן שבקובץ ה-XML אין בכלל תגית users, אז נוודא שלא נקבל NullPointerException
-    if (guessMarket.getGMUsers() == null || guessMarket.getGMUsers().getGMUser() == null) {
-        return engineUsers;
-    }
-
-    // מעבר על רשימת המשתמשים מתוך ה-XML
-    for (GMUser xmlUser : guessMarket.getGMUsers().getGMUser()) {
-
-        // 1. חילוץ ושמירת השם (ננקה רווחים למקרה שיש)
-        String username = xmlUser.getName().trim();
-
-        // בדיקה שהשם ייחודי (אם add מחזיר false, השם כבר קיים ב-Set)
-        if (!existingNames.add(username)) {
-            throw new InvalidXMLException("Duplicate User name found: " + username);
-        }
-
-        // 2. וולידציה על היתרה ההתחלתית
-        // שים לב: בדוק איך קוראים לגטר של הכסף אצלך (ייתכן שזה getFunds, getInitialCash וכו')
-        double initialFunds = xmlUser.getInitialCash();
-        if (initialFunds < 0) {
-            throw new InvalidXMLException("User '" + username + "' has invalid initial funds. Must be positive.");
-        }
-
-        // 3. חילוץ האירועים שהמשתמש הזה מנהל (Market Maker)
-        Set<Integer> managedEvents = new HashSet<>();
-
-        // בודקים אם יש לו בכלל הגדרת Market Maker
-        if (xmlUser.getGMMarketMaker() != null) {
-
-            // עוברים על רשימת אובייקטי ה-Event שה-Market Maker מנהל
-            for (engine.xml.Event xmlMmEvent : xmlUser.getGMMarketMaker().getEvent()) {
-
-                // שולפים את ה-ID מתוך תגית ה-Event הספציפית
-                int eventId = xmlMmEvent.getId();
-
-                // הבדיקה הקריטית: האם האירוע שהוא רוצה לנהל באמת קיים ב-XML?
-                if (!validEventIds.contains(eventId)) {
-                    throw new InvalidXMLException("User '" + username + "' is defined as Market Maker for an unknown Event ID: " + eventId);
-                }
-
-                managedEvents.add(eventId);
-            }
-        }
-
-        // 4. יצירת אובייקט ה-User של המנוע והוספתו לרשימה
-        // (תצטרך לוודא שהבנאי של מחלקת User שלך מקבל את הפרמטרים האלו)
-        User newUser = new User(username, initialFunds, managedEvents);
-        engineUsers.add(newUser);
-    }
-
-    return engineUsers;
-}
-
-private static void validateMarketMakers(List<Event> events, List<User> users) throws InvalidXMLException {
-    Map<Integer, String> mmMap = new HashMap<>();
-    for (User user : users) {
-        for (int eventId : user.getManagedEvents()) {
-            mmMap.put(eventId, user.getName());
-        }
-    }
-
-    for (Event event : events) {
-        if (!mmMap.containsKey(event.getId())) {
-            throw new InvalidXMLException("Validation Error: Event '" + event.getName() + "' (ID: " + event.getId() + ") has no Market Maker defined!");
-        }
-        event.setMarketMaker(mmMap.get(event.getId()));
-    }
 }
 
 }
