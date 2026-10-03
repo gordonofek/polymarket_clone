@@ -177,7 +177,7 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) {
+    public synchronized TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) {
         Event event = eventManager.getEvent(eventName);
         User initiatingUser = userManager.getUser(username);
 
@@ -401,6 +401,9 @@ public class Engine implements EngineInterface {
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
     }
 
+//    public EventManager getEventManager() {
+//        return eventManager;
+//    }
 
     public boolean addUser(String username) {
         // ה-Engine פשוט מגלגל את הבקשה למנהל הרלוונטי
