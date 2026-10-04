@@ -20,7 +20,7 @@ public class UsersServlet extends HttpServlet
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Engine engine = (Engine) getServletContext().getAttribute("engine");
 
-        String username = request.getParameter("username");
+        String username = request.getParameter("userName");
         String eventName = request.getParameter("eventName");
 
         response.setContentType("application/json");

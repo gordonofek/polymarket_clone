@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.io.IOException;
 
 @WebServlet(name = "FileUploadServlet", urlPatterns = "/FileUpload")
-//@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
+@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
 
 public class FileUploadServlet extends HttpServlet {
 

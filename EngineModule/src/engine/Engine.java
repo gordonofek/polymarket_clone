@@ -401,10 +401,6 @@ public class Engine implements EngineInterface {
         return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
     }
 
-//    public EventManager getEventManager() {
-//        return eventManager;
-//    }
-
     public boolean addUser(String username) {
         // ה-Engine פשוט מגלגל את הבקשה למנהל הרלוונטי
         return this.userManager.addIfNotExists(username);

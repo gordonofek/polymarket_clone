@@ -26,7 +26,7 @@ public class TradeServlet extends HttpServlet
         Engine engine = (Engine) getServletContext().getAttribute("engine");
         response.setContentType("application/json");
 
-        String username = request.getParameter("username");
+        String username = request.getParameter("userName");
         String eventName = request.getParameter("eventName");
         String optionName = request.getParameter("optionName");
         String tradeTypeStr = request.getParameter("tradeType");
