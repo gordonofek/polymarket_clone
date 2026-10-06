@@ -1,13 +1,12 @@
 package ui;
 
-import engine.Engine;
-import engine.EngineInterface;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import ui.network.ClientUtil;
 
 /**
  * State shared by every part of the UI.
@@ -19,7 +18,7 @@ import javafx.collections.ObservableList;
  */
 public class AppState {
 
-    private final EngineInterface engine = new Engine();
+    private ClientUtil clientUtil = new ClientUtil();
 
     // the user we are trading as (null = no user selected)
     private final ObjectProperty<String> activeUser = new SimpleObjectProperty<>(null);
@@ -30,8 +29,8 @@ public class AppState {
     // stylesheets of the current theme: set by the settings tab, used by the window and every popup
     private final ObservableList<String> themeStylesheets = FXCollections.observableArrayList();
 
-    public EngineInterface getEngine() {
-        return engine;
+    public ClientUtil getClientUtil() {
+        return clientUtil;
     }
 
     public String getActiveUser() {

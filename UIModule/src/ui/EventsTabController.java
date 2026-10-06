@@ -4,6 +4,7 @@ import engine.EngineInterface;
 import engine.dto.*;
 
 import internals.ActionType;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -22,6 +23,7 @@ import java.util.Objects;
 
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
+import ui.network.ClientUtil;
 
 /**
  * Controller for the Events tab (events-tab.fxml):
@@ -30,7 +32,7 @@ import javafx.scene.chart.XYChart;
 public class EventsTabController {
 
     private AppState state;
-    private EngineInterface engine;
+    private ClientUtil clientUtil;
 
     // Active user - events
     @FXML private Label userNameLabelEvents;
@@ -71,7 +73,7 @@ public class EventsTabController {
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
         this.state = state;
-        this.engine = state.getEngine();
+        this.clientUtil = state.getClientUtil();
 
         userNameLabelEvents.setMinWidth(Region.USE_PREF_SIZE);
         userBalanceLabelEvents.setMinWidth(Region.USE_PREF_SIZE);
@@ -136,19 +138,18 @@ public class EventsTabController {
     }
 
     private GridPane createEventTile(EventSummaryDTO eventSummary) {
-        EventDetailsDTO details = engine.getEventState(eventSummary.name());
-
+        // 1. Create the skeleton tile IMMEDIATELY so you have an object to return
         GridPane tile = new GridPane();
         tile.getStyleClass().add("event-tile");
 
-        // column constraints
+        // Set column constraints
         ColumnConstraints col1 = new ColumnConstraints();
         col1.setHgrow(Priority.ALWAYS);
         ColumnConstraints col2 = new ColumnConstraints();
         col2.setHalignment(HPos.RIGHT);
         tile.getColumnConstraints().addAll(col1, col2);
 
-        // id, trading method, status
+        // Populate the static parts of the tile (from EventSummaryDTO)
         Label idLabel = new Label("#" + eventSummary.name());
         idLabel.getStyleClass().add("event-id-label");
 
@@ -159,43 +160,21 @@ public class EventsTabController {
         HBox topLeftBox = new HBox(8, idLabel, methodLabel);
         topLeftBox.setAlignment(Pos.CENTER_LEFT);
 
-        // status
         Label statusLabel = new Label(eventSummary.status().replace("_", " "));
         statusLabel.getStyleClass().addAll("status-badge", "status-" + eventSummary.status().toLowerCase());
         statusLabel.setMinWidth(Label.USE_PREF_SIZE);
 
-        // name, options header
         Label titleLabel = new Label(eventSummary.name());
         titleLabel.getStyleClass().add("event-title-label");
 
         Label optionsHeader = new Label("Available Options:");
         optionsHeader.getStyleClass().add("options-header-label");
 
-        // description, options
         Label descLabel = new Label(eventSummary.description());
         descLabel.setWrapText(true);
         descLabel.getStyleClass().add("event-desc-label");
-        GridPane.setValignment(descLabel, VPos.TOP); // Align text to top
+        GridPane.setValignment(descLabel, VPos.TOP);
 
-        HBox optionsBox = new HBox(8);
-        optionsBox.setAlignment(Pos.TOP_RIGHT);
-
-        // buttons to event options
-        for (OptionDetailsDTO option : details.options()) {
-            Button optBtn = new Button(String.format("%s\n$%.2f", option.optionName(), option.currentPrice()));
-            optBtn.getStyleClass().add("option-preview-btn");
-            optBtn.setTextAlignment(TextAlignment.CENTER);
-            optBtn.setMinWidth(Button.USE_PREF_SIZE);
-
-            // Highlight if this is the winning option
-            if (eventSummary.status().equals("CLOSED") && details.winningOption() != null && details.winningOption().equals(option.optionName())) {
-                optBtn.getStyleClass().add("winning-option-btn");
-            }
-
-            optionsBox.getChildren().add(optBtn);
-        }
-
-        // commission
         Label commTitle = new Label("Commission:");
         commTitle.getStyleClass().add("comm-title-label");
 
@@ -207,37 +186,73 @@ public class EventsTabController {
         commBox.setAlignment(Pos.BOTTOM_LEFT);
         commBox.setPadding(new Insets(10, 0, 0, 0));
 
-        // add to grid
+        // Create an empty box for the dynamic options
+        HBox optionsBox = new HBox(8);
+        optionsBox.setAlignment(Pos.TOP_RIGHT);
+
+        // Add static components to the grid
         tile.add(topLeftBox, 0, 0);
         tile.add(statusLabel, 1, 0);
-
         tile.add(titleLabel, 0, 1);
         tile.add(optionsHeader, 1, 1);
-
         tile.add(descLabel, 0, 2);
         tile.add(optionsBox, 1, 2);
-        GridPane.setRowSpan(optionsBox, 2); // Allow options box to span across rows 2 and 3
-
+        GridPane.setRowSpan(optionsBox, 2);
         tile.add(commBox, 0, 3);
 
-
-        // click animation for the tile
         ScaleTransition clickAnimation = UiUtils.createPulseAnimation(tile, 200, 1.02);
-
-        tile.setOnMouseClicked(e -> {
+        tile.setOnMouseClicked(mouseEvent -> {
             UiUtils.playIfEnabled(clickAnimation, state);
             handleTileClick(eventSummary);
         });
 
+        // 2. Fetch the dynamic details in the background
+        Task<EventDetailsDTO> fetchEventStateTask = new Task<>() {
+            @Override
+            protected EventDetailsDTO call() throws Exception {
+                return clientUtil.getEventDetails(eventSummary.name());
+            }
+        };
+
+        fetchEventStateTask.setOnSucceeded(e ->
+        {
+            // 3. When data arrives, populate the existing optionsBox
+            EventDetailsDTO details = fetchEventStateTask.getValue();
+
+            for (OptionDetailsDTO option : details.options()) {
+                Button optBtn = new Button(String.format("%s\n$%.2f", option.optionName(), option.currentPrice()));
+                optBtn.getStyleClass().add("option-preview-btn");
+                optBtn.setTextAlignment(TextAlignment.CENTER);
+                optBtn.setMinWidth(Button.USE_PREF_SIZE);
+
+                if (eventSummary.status().equals("CLOSED") && details.winningOption() != null && details.winningOption().equals(option.optionName())) {
+                    optBtn.getStyleClass().add("winning-option-btn");
+                }
+
+                optionsBox.getChildren().add(optBtn);
+            }
+        });
+
+        fetchEventStateTask.setOnFailed(e -> {
+            System.err.println("Failed to load event details for tile: " + fetchEventStateTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchEventStateTask);
+        thread.setDaemon(true);
+        thread.start();
+
+        // 4. Return the skeleton immediately so the UI loop can continue
         return tile;
     }
 
-    private void handleTileClick(EventSummaryDTO eventSummary)
-    {
-        this.selectedEvent = eventSummary;
+    // 2. BUNDLE THE DATA: Create a local record to hold all 3 server responses
+    record TileDataBundle(EventDetailsDTO history, List<ParticipantHoldingDTO> participants, boolean isMarketMaker) {}
 
+    private void handleTileClick(EventSummaryDTO eventSummary) {
+        this.selectedEvent = eventSummary;
         boolean isOrderBook = eventSummary.tradingMethodType().contains("ORDER_BOOK");
 
+        // 1. IMMEDIATE UI UPDATES (Run instantly so the UI feels responsive)
         detailIdLabel.setText("#" + eventSummary.name());
 
         String methodStr = eventSummary.tradingMethodType();
@@ -254,15 +269,54 @@ public class EventsTabController {
         String commTypeStr = eventSummary.commissionType().replace("_", " ");
         detailCommLabel.setText(eventSummary.commission() + "% (" + commTypeStr + ")");
 
+        // Clear previous data while waiting for the server
         optionsContainer.getChildren().clear();
-
-        EventDetailsDTO historyDetails = engine.getEventState(eventSummary.name());
-        List<ParticipantHoldingDTO> participantsDetails = engine.getEventParticipants(eventSummary.name());
+        participationsHistoryListView.getItems().clear();
+        eventparticipationsListView.getItems().clear();
 
         if (historyTitleLabel != null) {
             historyTitleLabel.setText(isOrderBook ? "Order Book Queue" : "Participation History");
         }
 
+        // 3. BACKGROUND FETCH
+        Task<TileDataBundle> fetchTileDataTask = new Task<>() {
+            @Override
+            protected TileDataBundle call() throws Exception {
+                EventDetailsDTO history = clientUtil.getEventDetails(eventSummary.name());
+                List<ParticipantHoldingDTO> participants = clientUtil.getEventParticipants(eventSummary.name());
+
+                boolean isMarketMaker = false;
+                if (state.getActiveUser() != null) {
+                    isMarketMaker = clientUtil.isUserMarketMaker(state.getActiveUser(), eventSummary.name());
+                }
+
+                return new TileDataBundle(history, participants, isMarketMaker);
+            }
+        };
+
+        // 4. DELEGATE UI POPULATION TO HELPER METHODS
+        fetchTileDataTask.setOnSucceeded(e -> {
+            TileDataBundle data = fetchTileDataTask.getValue();
+
+            populateOptionsList(data.history(), eventSummary, isOrderBook);
+            populateHistoryList(data.history(), isOrderBook);
+            populateParticipantsList(data.participants());
+            updateMarketMakerControls(data.isMarketMaker(), eventSummary.status());
+            updatePriceGraph(data.history());
+        });
+
+        fetchTileDataTask.setOnFailed(e -> {
+            System.err.println("Failed to load details for tile click: " + fetchTileDataTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchTileDataTask);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    // --- HELPER METHODS ---
+
+    private void populateOptionsList(EventDetailsDTO historyDetails, EventSummaryDTO eventSummary, boolean isOrderBook) {
         for (OptionDetailsDTO option : historyDetails.options()) {
             double price = option.currentPrice();
             String optionName = option.optionName();
@@ -283,7 +337,6 @@ public class EventsTabController {
             Label statsLbl = new Label();
             statsLbl.getStyleClass().add("option-percent-label");
             statsLbl.setTextAlignment(TextAlignment.CENTER);
-
             statsLbl.setWrapText(false);
             statsLbl.setMinWidth(0);
 
@@ -299,7 +352,7 @@ public class EventsTabController {
             Button buyBtn = new Button(buyText);
             buyBtn.getStyleClass().add("buy-option-btn");
             buyBtn.setMinWidth(Button.USE_PREF_SIZE);
-            buyBtn.setOnAction(e -> handleBuyAction(eventSummary, optionName));
+            buyBtn.setOnAction(evt -> handleBuyAction(eventSummary, optionName));
             UiUtils.attachClickAnimation(buyBtn, state);
             actionButtons.getChildren().add(buyBtn);
 
@@ -307,7 +360,7 @@ public class EventsTabController {
                 Button sellBtn = new Button("Sell");
                 sellBtn.getStyleClass().add("sell-option-btn");
                 sellBtn.setMinWidth(Button.USE_PREF_SIZE);
-                sellBtn.setOnAction(e -> handleSellAction(eventSummary, optionName));
+                sellBtn.setOnAction(evt -> handleSellAction(eventSummary, optionName));
                 UiUtils.attachClickAnimation(sellBtn, state);
                 actionButtons.getChildren().add(sellBtn);
             }
@@ -318,44 +371,32 @@ public class EventsTabController {
 
                 Region rightSpacer = new Region();
                 HBox.setHgrow(rightSpacer, Priority.ALWAYS);
-
                 row.getChildren().addAll(nameLbl, spacer, statsLbl, rightSpacer, priceLbl, actionButtons);
             } else {
                 statsLbl.setText(String.format("%.1f%%", price * 100));
                 row.getChildren().addAll(nameLbl, spacer, statsLbl, priceLbl, actionButtons);
             }
-
             optionsContainer.getChildren().add(row);
         }
+    }
 
-        // trade history of the event
-        // trade history OR order book queues
-        participationsHistoryListView.getItems().clear();
-
+    private void populateHistoryList(EventDetailsDTO historyDetails, boolean isOrderBook) {
         if (isOrderBook) {
-            // ORDER BOOK: Display pending Buy/Sell Queues
             boolean hasPendingOrders = false;
             for (OptionDetailsDTO option : historyDetails.options()) {
-
-                // Add Buy Requests
                 for (PendingRequestDTO req : option.buyQueue()) {
                     hasPendingOrders = true;
                     addPendingRequestLabel(req, option.optionName(), true);
                 }
-
-                // Add Sell Requests
                 for (PendingRequestDTO req : option.sellQueue()) {
                     hasPendingOrders = true;
                     addPendingRequestLabel(req, option.optionName(), false);
                 }
             }
-
             if (!hasPendingOrders) {
                 participationsHistoryListView.getItems().add(new Label("The Order Book is currently empty."));
             }
-
         } else {
-            // LMSR: Display executed trade history
             List<TradeRecordDTO> history = historyDetails.tradeHistory();
             if(history.isEmpty()) {
                 Label emptyLbl = new Label("No trades recorded yet for this event. :C");
@@ -368,14 +409,13 @@ public class EventsTabController {
                 }
             }
         }
+    }
 
-        // users participating in the event
-        eventparticipationsListView.getItems().clear();
+    private void populateParticipantsList(List<ParticipantHoldingDTO> participantsDetails) {
         if(participantsDetails.isEmpty()) {
             Label emptyParticipantsLbl = new Label("No Users have taken part in this event. :C");
             eventparticipationsListView.getItems().add(emptyParticipantsLbl);
-        }
-        else {
+        } else {
             for (ParticipantHoldingDTO participant : participantsDetails) {
                 String username = participant.username();
                 for (Map.Entry<String, Integer> holding : participant.shares().entrySet()) {
@@ -390,10 +430,9 @@ public class EventsTabController {
                 }
             }
         }
-        updatePriceGraph(historyDetails);
+    }
 
-        boolean isMarketMaker = engine.isUserMarketMaker(state.getActiveUser(), eventSummary.name());
-        String status = eventSummary.status();
+    private void updateMarketMakerControls(boolean isMarketMaker, String status) {
         mmControlsBox.setVisible(isMarketMaker);
         mmControlsBox.setManaged(isMarketMaker);
 
@@ -404,187 +443,6 @@ public class EventsTabController {
         boolean canClose = isMarketMaker && status.equals("OPEN");
         closeEventBtn.setVisible(canClose);
         closeEventBtn.setManaged(canClose);
-    }
-
-    /** #####################################
-     *      Dialog Helped function
-     *  #####################################
-     */
-
-    // applies the current theme to the popup
-    private void styleDialog(Dialog<?> dialog) {
-        UiUtils.styleDialog(dialog, state.getThemeStylesheets());
-    }
-
-    @FXML
-    private void handleStartEventAction() {
-        if (selectedEvent == null || state.getActiveUser() == null) return;
-
-        TradeReceiptDTO receipt = engine.startEvent(state.getActiveUser(), selectedEvent.name());
-
-        if (receipt.isSuccess()) {
-            showAlert(Alert.AlertType.INFORMATION, "Event Started", String.format("Event successfully opened!\nCost deducted: $%.2f", receipt.totalCost()));
-
-            updateEvents();
-        }
-        else {
-            showAlert(Alert.AlertType.ERROR, "Cannot start the event", receipt.message());
-        }
-    }
-
-    @FXML
-    private void handleCloseEventAction() {
-        if (selectedEvent == null || state.getActiveUser() == null) return;
-
-        EventDetailsDTO details = engine.getEventState(selectedEvent.name());
-        List<String> optionNames = new ArrayList<>();
-        for (OptionDetailsDTO option : details.options()) {
-            optionNames.add(option.optionName());
-        }
-
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(optionNames.get(0), optionNames);
-        dialog.setTitle("Close Event");
-        dialog.setHeaderText("Closing: " + selectedEvent.name());
-        dialog.setContentText("Select the winning option:");
-        styleDialog(dialog);
-
-        dialog.showAndWait().ifPresent(winningOption -> {
-            CloseEventReceiptDTO receipt = engine.closeEvent(selectedEvent.name(), winningOption);
-
-            if (receipt.isSuccess()) {
-                String msg = String.format("Event Closed!\nWinner: %s\nTotal Payout: $%.2f\nCommission Taken: $%.2f\nReturned to MM: $%.2f",
-                        receipt.winningOption(), receipt.totalPayout(), receipt.commissionTaken(), receipt.leftoverPool());
-                showAlert(Alert.AlertType.INFORMATION, "Event Closed", msg);
-
-                updateEvents();
-            } else {
-                showAlert(Alert.AlertType.ERROR, "Error Closing Event", receipt.message());
-            }
-        });
-    }
-
-    private void updateEvents()
-    {
-        this.allEvents = engine.getAllEvents();
-        for (EventSummaryDTO event : this.allEvents) {
-            if (Objects.equals(event.name(), selectedEvent.name())) {
-                this.selectedEvent = event;
-                break;
-            }
-        }
-        updateEventList();
-        updateBalance();
-        handleTileClick(selectedEvent);
-    }
-
-    private void handleBuyAction(EventSummaryDTO event, String optionName) {
-        boolean isOrderBook = event.tradingMethodType().toUpperCase().contains("ORDER_BOOK");
-        showTradeDialog(event, optionName, ActionType.BUY, isOrderBook);
-        updateBalance();
-    }
-
-    private void handleSellAction(EventSummaryDTO event, String optionName) {
-        showTradeDialog(event, optionName, ActionType.SELL, true);
-        updateBalance();
-    }
-
-    private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
-        if (state.getActiveUser() == null) {
-            showAlert(Alert.AlertType.WARNING, "No User Selected", "Please go to the Users tab and select a user to trade.");
-            return;
-        }
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle(action.name() + " Shares - " + optionName);
-        dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
-        styleDialog(dialog);
-
-        // Set the button types
-        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField amountField = new TextField();
-        amountField.setPromptText("e.g. 10");
-        grid.add(new Label("Amount of shares:"), 0, 0);
-        grid.add(amountField, 1, 0);
-
-        TextField priceField = new TextField();
-        priceField.setPromptText("e.g. 0.50");
-
-        // Only show the price limit field if it's an Order Book event
-        if (isOrderBook) {
-            grid.add(new Label("Price limit ($) (Price Per Share):"), 0, 1);
-            grid.add(priceField, 1, 1);
-        }
-
-        dialog.getDialogPane().setContent(grid);
-
-        // Validate and place the order when OK is clicked.
-        // Consuming the event keeps the dialog open so the user can fix their input.
-        TradeReceiptDTO[] successfulReceipt = new TradeReceiptDTO[1];
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.addEventFilter(javafx.event.ActionEvent.ACTION, actionEvent -> {
-            try {
-                int amount = Integer.parseInt(amountField.getText().trim());
-                if (amount <= 0) {
-                    showAlert(Alert.AlertType.ERROR, "Invalid Input", "Amount must be greater than 0.");
-                    actionEvent.consume();
-                    return;
-                }
-
-                double priceLimit = 0.0;
-                if (isOrderBook) {
-                    priceLimit = Double.parseDouble(priceField.getText().trim());
-                    if (priceLimit <= 0) {
-                        showAlert(Alert.AlertType.ERROR, "Invalid Input", "Price limit must be greater than 0.");
-                        actionEvent.consume();
-                        return;
-                    }
-                }
-
-                // Send the trade to the engine
-                TradeReceiptDTO receipt = engine.placeOrder(state.getActiveUser() ,event.name(), optionName, amount, action, priceLimit);
-
-                if (receipt.isSuccess()) {
-                    successfulReceipt[0] = receipt;
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
-                    actionEvent.consume();
-                }
-
-            } catch (NumberFormatException e) {
-                showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter valid numeric values.");
-                actionEvent.consume();
-            }
-        });
-
-        dialog.showAndWait();
-
-        TradeReceiptDTO receipt = successfulReceipt[0];
-        if (receipt != null) {
-            String msg;
-
-            // Check if the order was just queued (no money exchanged hands yet)
-            if (receipt.totalCost() == 0.0 && receipt.commission() == 0.0) {
-                msg = "Trade submitted to the queue.";
-            } else {
-                // The trade actually executed right away
-                msg = String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f",
-                        receipt.totalCost(), receipt.commission());
-            }
-
-            showAlert(Alert.AlertType.INFORMATION, "Success", msg);
-
-            // Reload all events so both the event tiles and the right panel show the new prices
-            updateEvents();
-        }
-    }
-
-    private void showAlert(Alert.AlertType type, String title, String content) {
-        UiUtils.showAlert(type, title, content, state.getThemeStylesheets());
     }
 
     private void updatePriceGraph(EventDetailsDTO details) {
@@ -624,11 +482,288 @@ public class EventsTabController {
         }
     }
 
+    /** #####################################
+     *      Dialog Helped function
+     *  #####################################
+     */
+
+    // applies the current theme to the popup
+    private void styleDialog(Dialog<?> dialog) {
+        UiUtils.styleDialog(dialog, state.getThemeStylesheets());
+    }
+
+    @FXML
+    private void handleStartEventAction() {
+        if (selectedEvent == null || state.getActiveUser() == null) return;
+
+        Task<TradeReceiptDTO> fetchTradeReceiptDTO = new Task<>() {
+            @Override
+            protected TradeReceiptDTO call() throws Exception {
+                return clientUtil.startEvent(state.getActiveUser(), selectedEvent.name());
+            }
+        };
+
+        fetchTradeReceiptDTO.setOnSucceeded(e -> {
+            TradeReceiptDTO tradeReceipt = fetchTradeReceiptDTO.getValue();
+
+            // Check the game logic success/failure INSIDE the Succeeded block
+            if (tradeReceipt.isSuccess()) {
+                showAlert(Alert.AlertType.INFORMATION, "Event Started",
+                        String.format("Event successfully opened!\nCost deducted: $%.2f", tradeReceipt.totalCost()));
+                updateEvents();
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Cannot start the event", tradeReceipt.message());
+            }
+        });
+
+        fetchTradeReceiptDTO.setOnFailed(e -> {
+            // Handle actual network or Java exceptions here
+            showAlert(Alert.AlertType.ERROR, "Network Error",
+                    "Failed to connect to server: " + fetchTradeReceiptDTO.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchTradeReceiptDTO);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    @FXML
+    private void handleCloseEventAction() {
+        if (selectedEvent == null || state.getActiveUser() == null) return;
+
+        // TASK 1: Fetch the options for the dropdown menu
+        Task<EventDetailsDTO> fetchDetailsTask = new Task<>() {
+            @Override
+            protected EventDetailsDTO call() throws Exception {
+                return clientUtil.getEventDetails(selectedEvent.name());
+            }
+        };
+
+        fetchDetailsTask.setOnSucceeded(e ->
+        {
+            EventDetailsDTO details = fetchDetailsTask.getValue();
+            List<String> optionNames = new ArrayList<>();
+            for (OptionDetailsDTO option : details.options()) {
+                optionNames.add(option.optionName());
+            }
+
+            ChoiceDialog<String> dialog = new ChoiceDialog<>(optionNames.get(0), optionNames);
+            dialog.setTitle("Close Event");
+            dialog.setHeaderText("Closing: " + selectedEvent.name());
+            dialog.setContentText("Select the winning option:");
+            styleDialog(dialog);
+
+            // Wait for user to select an option and click OK
+            dialog.showAndWait().ifPresent(winningOption -> {
+
+                // TASK 2: Send the close command to the server
+                Task<CloseEventReceiptDTO> closeTask = new Task<>() {
+                    @Override
+                    protected CloseEventReceiptDTO call() throws Exception {
+                        return clientUtil.closeEvent(selectedEvent.name(), winningOption);
+                    }
+                };
+
+                closeTask.setOnSucceeded(evt -> {
+                    CloseEventReceiptDTO receipt = closeTask.getValue();
+                    if (receipt.isSuccess()) {
+                        String msg = String.format("Event Closed!\nWinner: %s\nTotal Payout: $%.2f\nCommission Taken: $%.2f\nReturned to MM: $%.2f",
+                                receipt.winningOption(), receipt.totalPayout(), receipt.commissionTaken(), receipt.leftoverPool());
+                        showAlert(Alert.AlertType.INFORMATION, "Event Closed", msg);
+                        updateEvents();
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Error Closing Event", receipt.message());
+                    }
+                });
+
+                Thread t2 = new Thread(closeTask);
+                t2.setDaemon(true);
+                t2.start();
+            });
+        });
+
+        Thread t1 = new Thread(fetchDetailsTask);
+        t1.setDaemon(true);
+        t1.start();
+    }
+
+    public void updateEvents() {
+        Task<List<EventSummaryDTO>> fetchEventsTask = new Task<>() {
+            @Override
+            protected List<EventSummaryDTO> call() throws Exception {
+                return clientUtil.getEventsSummary();
+            }
+        };
+
+        fetchEventsTask.setOnSucceeded(e -> {
+            this.allEvents = fetchEventsTask.getValue();
+
+            // Re-find the selected event from the fresh data
+            for (EventSummaryDTO event : this.allEvents) {
+                if (selectedEvent != null && Objects.equals(event.name(), selectedEvent.name())) {
+                    this.selectedEvent = event;
+                    break;
+                }
+            }
+
+            updateEventList();
+            updateBalance();
+            if (selectedEvent != null) {
+                handleTileClick(selectedEvent);
+            }
+        });
+
+        Thread thread = new Thread(fetchEventsTask);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void handleBuyAction(EventSummaryDTO event, String optionName) {
+        boolean isOrderBook = event.tradingMethodType().toUpperCase().contains("ORDER_BOOK");
+        showTradeDialog(event, optionName, ActionType.BUY, isOrderBook);
+        updateBalance();
+    }
+
+    private void handleSellAction(EventSummaryDTO event, String optionName) {
+        showTradeDialog(event, optionName, ActionType.SELL, true);
+        updateBalance();
+    }
+
+    // A temporary container to hold the validated input from the dialog
+    private record TradeInput(int amount, double limitPrice) {}
+
+    private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
+        if (state.getActiveUser() == null) {
+            showAlert(Alert.AlertType.WARNING, "No User Selected", "Please go to the Users tab and select a user to trade.");
+            return;
+        }
+
+        Dialog<TradeInput> dialog = new Dialog<>();
+        dialog.setTitle(action.name() + " Shares - " + optionName);
+        dialog.setHeaderText("Event: " + event.name() + "\nOption: " + optionName);
+        styleDialog(dialog);
+
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField amountField = new TextField();
+        amountField.setPromptText("e.g. 10");
+        grid.add(new Label("Amount of shares:"), 0, 0);
+        grid.add(amountField, 1, 0);
+
+        TextField priceField = new TextField();
+        priceField.setPromptText("e.g. 0.50");
+
+        if (isOrderBook) {
+            grid.add(new Label("Price limit ($) (Price Per Share):"), 0, 1);
+            grid.add(priceField, 1, 1);
+        }
+
+        dialog.getDialogPane().setContent(grid);
+
+        // 1. SYNCHRONOUS LOCAL VALIDATION
+        // This ensures the user typed actual numbers > 0 before the dialog closes.
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        okButton.addEventFilter(javafx.event.ActionEvent.ACTION, actionEvent -> {
+            try {
+                int amount = Integer.parseInt(amountField.getText().trim());
+                if (amount <= 0) {
+                    showAlert(Alert.AlertType.ERROR, "Invalid Input", "Amount must be greater than 0.");
+                    actionEvent.consume();
+                    return;
+                }
+                if (isOrderBook) {
+                    double priceLimit = Double.parseDouble(priceField.getText().trim());
+                    if (priceLimit <= 0) {
+                        showAlert(Alert.AlertType.ERROR, "Invalid Input", "Price limit must be greater than 0.");
+                        actionEvent.consume();
+                    }
+                }
+            } catch (NumberFormatException e) {
+                showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter valid numeric values.");
+                actionEvent.consume();
+            }
+        });
+
+        // 2. EXTRACT THE DATA
+        // If validation passed, convert the text fields into our TradeInput record.
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == ButtonType.OK) {
+                int amount = Integer.parseInt(amountField.getText().trim());
+                double limit = isOrderBook ? Double.parseDouble(priceField.getText().trim()) : 0.0;
+                return new TradeInput(amount, limit);
+            }
+            return null;
+        });
+
+        // 3. LAUNCH THE BACKGROUND TASK
+        // Once the dialog closes, send the TradeInput to Tomcat.
+        dialog.showAndWait().ifPresent(input ->
+        {
+
+            Task<TradeReceiptDTO> tradeTask = new Task<>()
+            {
+                @Override
+                protected TradeReceiptDTO call() throws Exception {
+                    return clientUtil.placeOrder(state.getActiveUser(), event.name(), optionName, input.amount(), action, input.limitPrice());
+                }
+            };
+
+            tradeTask.setOnSucceeded(e ->
+            {
+                TradeReceiptDTO receipt = tradeTask.getValue();
+
+                if (receipt.isSuccess()) {
+                    String msg = (receipt.totalCost() == 0.0 && receipt.commission() == 0.0)
+                            ? "Trade submitted to the queue."
+                            : String.format("Trade successful!\nTotal Paid: $%.2f\nCommission: $%.2f", receipt.totalCost(), receipt.commission());
+
+                    showAlert(Alert.AlertType.INFORMATION, "Success", msg);
+                    updateEvents(); // Refresh the UI with the new prices
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Trade Failed", receipt.message());
+                }
+            });
+
+            tradeTask.setOnFailed(e -> {
+                showAlert(Alert.AlertType.ERROR, "Network Error", "Failed to place order: " + tradeTask.getException().getMessage());
+            });
+
+            Thread thread = new Thread(tradeTask);
+            thread.setDaemon(true);
+            thread.start();
+        });
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String content) {
+        UiUtils.showAlert(type, title, content, state.getThemeStylesheets());
+    }
+
+
+
     private void updateBalance() {
         String activeUser = state.getActiveUser();
         if (activeUser == null) return;
-        UserDetailsDTO details = engine.getUserDetails(activeUser);
-        userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
+
+        Task<UserDetailsDTO> balanceTask = new Task<>() {
+            @Override
+            protected UserDetailsDTO call() throws Exception {
+                return clientUtil.getUserDetails(activeUser);
+            }
+        };
+
+        balanceTask.setOnSucceeded(e -> {
+            UserDetailsDTO details = balanceTask.getValue();
+            userBalanceLabelEvents.setText(String.format("$%.2f", details.balance()));
+        });
+
+        Thread thread = new Thread(balanceTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void addPendingRequestLabel(PendingRequestDTO req, String optionName, boolean isBuy) {

@@ -45,13 +45,11 @@ public class UserManager implements Serializable {
         this.userRegistry.clear();
     }
 
-    public synchronized boolean addIfNotExists(String username) {
-        // הבדיקה וההוספה קורות יחד תחת המנעול כדי למנוע מצבי מרוץ
+    public boolean addIfNotExists(String username) {
         if (this.userRegistry.containsKey(username)) {
             return false; // המשתמש כבר קיים - כישלון
         }
 
-        // המשתמש לא קיים - נוסיף אותו (בהנחה שקיימת מחלקת User מתאימה)
         this.userRegistry.put(username, new User(username));
         return true; // הוסף בהצלחה
     }

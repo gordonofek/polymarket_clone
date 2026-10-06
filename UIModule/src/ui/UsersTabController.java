@@ -1,17 +1,21 @@
 package ui;
 
-import engine.EngineInterface;
 import engine.dto.*;
 
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.VBox;
+import ui.network.ClientUtil;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 
 import java.util.List;
 import java.util.Map;
@@ -44,32 +48,61 @@ public class UsersTabController {
     @FXML private VBox userEventOptionsBox;
 
     private AppState state;
-    private EngineInterface engine;
+    private ClientUtil clientUtil;
+    private Timeline autoRefresher;
 
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
         this.state = state;
-        this.engine = state.getEngine();
+        this.clientUtil = state.getClientUtil();
 
         setupUsersTable();
         setupPortfolioTable();
+
+        autoRefresher = new Timeline(new KeyFrame(Duration.seconds(2), e -> refresh()));
+        autoRefresher.setCycleCount(Timeline.INDEFINITE);
+        autoRefresher.play();
     }
 
-    // reloads the users list from the engine and reselects the active user
-    public void refresh() {
-        List<UserSummaryDTO> updatedUsers = engine.getAllUsers();
-        usersTableView.getItems().setAll(updatedUsers);
-        String activeUser = state.getActiveUser();
-        if(activeUser != null) {
-            for (UserSummaryDTO user : updatedUsers) {
-                if (user.name().equals(activeUser)) {
-                    // reselect the user in the table
-                    usersTableView.getSelectionModel().select(user);
-                    loadUserDetails(user);
-                    break;
+    // reloads the users list from the engine and refresh the active user
+    public void refresh()
+    {
+        Task<List<UserSummaryDTO>> fetchUsersTask = new Task<>()
+        {
+            @Override
+            protected List<UserSummaryDTO> call() throws Exception
+            {
+                // This runs in the background thread.
+                // We call the synchronous method from ClientUtil here.
+                return clientUtil.getUsersSummary();
+            }
+        };
+
+        fetchUsersTask.setOnSucceeded(e ->
+        {
+            // This block safely runs back on the JavaFX UI Thread
+            List<UserSummaryDTO> users = fetchUsersTask.getValue();
+            usersTableView.getItems().setAll(users);
+            String activeUser = state.getActiveUser();
+            if (activeUser != null) {
+                for (UserSummaryDTO user : users) {
+                    if (user.name().equals(activeUser)) {
+                        usersTableView.getSelectionModel().select(user);
+                        loadUserDetails(user);
+                        break;
+                    }
                 }
             }
-        }
+        });
+
+        fetchUsersTask.setOnFailed(e -> {
+            // Show an Alert box here so you know if Tomcat is down
+            System.err.println("Failed to load users: " + fetchUsersTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchUsersTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     // clears everything shown for the previously selected user
@@ -84,69 +117,117 @@ public class UsersTabController {
 
     private void loadUserDetails(UserSummaryDTO user)
     {
-        UserDetailsDTO details = engine.getUserDetails(user.name());
-        userNameLabel.setText(details.name());
-        userBalanceLabel.setText(String.format("$%.2f", details.balance()));
-        portfolioTableView.getItems().clear();
-        userEventOptionsBox.getChildren().clear();
-        userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
+        Task<UserDetailsDTO> fetchUserDTOTask = new Task<>()
+        {
+            @Override
+            protected UserDetailsDTO call() throws Exception
+            {
+                // This runs in the background thread.
+                // We call the synchronous method from ClientUtil here.
+                return clientUtil.getUserDetails(user.name());
+            }
+        };
 
-        portfolioTableView.getItems().addAll(details.portfolio());
+        fetchUserDTOTask.setOnSucceeded(e ->
+        {
+            // This block safely runs back on the JavaFX UI Thread
+            UserDetailsDTO details = fetchUserDTOTask.getValue();
+            userNameLabel.setText(details.name());
+            userBalanceLabel.setText(String.format("$%.2f", details.balance()));
+            portfolioTableView.getItems().clear();
+            userEventOptionsBox.getChildren().clear();
+            userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
+
+            portfolioTableView.getItems().addAll(details.portfolio());
+        });
+
+        fetchUserDTOTask.setOnFailed(e -> {
+            // Show an Alert box here so you know if Tomcat is down
+            System.err.println("Failed to load users: " + fetchUserDTOTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchUserDTOTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void populateUserEventOverview(EventSummaryDTO event, String username) {
+
         userEventTitleLabel.setText("Overview for: " + event.name());
         userEventOptionsBox.getChildren().clear();
 
         boolean isOrderBook = event.tradingMethodType().contains("ORDER_BOOK");
         boolean isClosed = event.status().equals("CLOSED");
 
-        // Fetch the compiled data from the Engine!
-        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.name());
-
-        VBox contentBox = new VBox(10);
-
-        Label commLabel = new Label(String.format("Total Commission Paid: $%.2f", overview.totalCommissionPaid()));
-        commLabel.getStyleClass().add("overview-comm-label");
-        contentBox.getChildren().add(commLabel);
-
-        if (isOrderBook) {
-            Label obLabel = new Label("Order Book Holdings & Costs:");
-            obLabel.getStyleClass().add("overview-header-label");
-            contentBox.getChildren().add(obLabel);
-
-            // Loop through options and display Total Paid
-            for (Map.Entry<String, Double> entry : overview.optionInvestments().entrySet()) {
-                Label optLabel = new Label(String.format("• %s: Spent $%.2f", entry.getKey(), entry.getValue()));
-                contentBox.getChildren().add(optLabel);
+        Task<UserEventOverviewDTO> fetchUserEventOverviewTask = new Task<>()
+        {
+            @Override
+            protected UserEventOverviewDTO call() throws Exception
+            {
+                // This runs in the background thread.
+                // We call the synchronous method from ClientUtil here.
+                return clientUtil.getUserEventOverview(username, event.name());
             }
+        };
 
-            if (isClosed) {
-                Label plLabel = new Label(String.format("Total Profit/Loss: $%.2f", overview.profitLoss()));
-                plLabel.getStyleClass().add("overview-pl-label");
-                contentBox.getChildren().add(plLabel);
-            }
-        } else {
-            Label lmsrLabel = new Label("LMSR Trade History:");
-            lmsrLabel.getStyleClass().add("overview-header-label");
-            contentBox.getChildren().add(lmsrLabel);
+        fetchUserEventOverviewTask.setOnSucceeded(e ->
+        {
+            // This block safely runs back on the JavaFX UI Thread
+            UserEventOverviewDTO overview = fetchUserEventOverviewTask.getValue();
 
-            if (overview.userTradeHistory().isEmpty()) {
-                contentBox.getChildren().add(new Label("No trades recorded yet."));
+            VBox contentBox = new VBox(10);
+
+            Label commLabel = new Label(String.format("Total Commission Paid: $%.2f", overview.totalCommissionPaid()));
+            commLabel.getStyleClass().add("overview-comm-label");
+            contentBox.getChildren().add(commLabel);
+
+            if (isOrderBook) {
+                Label obLabel = new Label("Order Book Holdings & Costs:");
+                obLabel.getStyleClass().add("overview-header-label");
+                contentBox.getChildren().add(obLabel);
+
+                // Loop through options and display Total Paid
+                for (Map.Entry<String, Double> entry : overview.optionInvestments().entrySet()) {
+                    Label optLabel = new Label(String.format("• %s: Spent $%.2f", entry.getKey(), entry.getValue()));
+                    contentBox.getChildren().add(optLabel);
+                }
+
+                if (isClosed) {
+                    Label plLabel = new Label(String.format("Total Profit/Loss: $%.2f", overview.profitLoss()));
+                    plLabel.getStyleClass().add("overview-pl-label");
+                    contentBox.getChildren().add(plLabel);
+                }
             } else {
-                for (TradeRecordDTO trade : overview.userTradeHistory()) {
-                    contentBox.getChildren().add(UiUtils.createTradeLabel(trade));
+                Label lmsrLabel = new Label("LMSR Trade History:");
+                lmsrLabel.getStyleClass().add("overview-header-label");
+                contentBox.getChildren().add(lmsrLabel);
+
+                if (overview.userTradeHistory().isEmpty()) {
+                    contentBox.getChildren().add(new Label("No trades recorded yet."));
+                } else {
+                    for (TradeRecordDTO trade : overview.userTradeHistory()) {
+                        contentBox.getChildren().add(UiUtils.createTradeLabel(trade));
+                    }
+                }
+
+                if (isClosed) {
+                    Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
+                    winnerLabel.getStyleClass().add("overview-winner-label");
+                    contentBox.getChildren().add(winnerLabel);
                 }
             }
 
-            if (isClosed) {
-                Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
-                winnerLabel.getStyleClass().add("overview-winner-label");
-                contentBox.getChildren().add(winnerLabel);
-            }
-        }
+            userEventOptionsBox.getChildren().add(contentBox);
+        });
 
-        userEventOptionsBox.getChildren().add(contentBox);
+        fetchUserEventOverviewTask.setOnFailed(e -> {
+            // Show an Alert box here so you know if Tomcat is down
+            System.err.println("Failed to load users: " + fetchUserEventOverviewTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchUserEventOverviewTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**
@@ -201,17 +282,39 @@ public class UsersTabController {
 
         portfolioTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
 
+        // The Listener: Trigger a Task ONLY when a row is clicked
         portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
-                // Find the event the portfolio row belongs to
-                EventSummaryDTO selectedPortfolioEvent = engine.getAllEvents().stream()
-                        .filter(e -> e.name().equals(newSelection.eventName()))
-                        .findFirst()
-                        .orElse(null);
 
-                if (selectedPortfolioEvent != null) {
-                    populateUserEventOverview(selectedPortfolioEvent, state.getActiveUser());
-                }
+                // Define the Task to fetch the event list from Tomcat
+                Task<List<EventSummaryDTO>> fetchEventsTask = new Task<>() {
+                    @Override
+                    protected List<EventSummaryDTO> call() throws Exception {
+                        return clientUtil.getEventsSummary();
+                    }
+                };
+
+                // When the server responds, process the click on the UI thread
+                fetchEventsTask.setOnSucceeded(e -> {
+                    List<EventSummaryDTO> events = fetchEventsTask.getValue();
+
+                    EventSummaryDTO selectedPortfolioEvent = events.stream()
+                            .filter(ev -> ev.name().equals(newSelection.eventName()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (selectedPortfolioEvent != null) {
+                        populateUserEventOverview(selectedPortfolioEvent, state.getActiveUser());
+                    }
+                });
+
+                fetchEventsTask.setOnFailed(e -> {
+                    System.err.println("Failed to fetch events for portfolio click: " + fetchEventsTask.getException().getMessage());
+                });
+
+                Thread thread = new Thread(fetchEventsTask);
+                thread.setDaemon(true);
+                thread.start();
             }
         });
     }

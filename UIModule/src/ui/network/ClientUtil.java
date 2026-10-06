@@ -2,6 +2,7 @@ package ui.network;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import engine.dto.*;
+import internals.ActionType;
 
 import java.io.File;
 import java.net.URI;
@@ -90,6 +91,77 @@ public class ClientUtil {
         }
     }
 
+    public List<ParticipantHoldingDTO> getEventParticipants(String eventName) throws Exception {
+        // 1. Build the URL with the eventName AND the action parameter
+        // Make sure to match your actual server base URL and port!
+        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName + "&action=participants";
+
+        // 2. Build the request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+
+        // 3. Send the request and wait for the response
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Server error: " + response.statusCode());
+        }
+
+        // 4. Parse the JSON array back into a List of ParticipantHoldingDTOs
+        Type listType = new TypeToken<List<ParticipantHoldingDTO>>(){}.getType();
+        return new Gson().fromJson(response.body(), listType);
+    }
+
+    public TradeReceiptDTO startEvent(String username, String eventName) throws Exception {
+        String url = "http://localhost:8080/polymarket/events";
+
+        // 1. Format the parameters just like a web form submission
+        String formData = "action=startEvent&eventName=" + eventName + "&username=" + username;
+
+        // 2. Build the POST request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/x-www-form-urlencoded") // Tells Tomcat to expect form data
+                .POST(HttpRequest.BodyPublishers.ofString(formData))
+                .build();
+
+        // 3. Send the request
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Server error: " + response.statusCode());
+        }
+
+        // 4. Parse the returned JSON back into the TradeReceiptDTO
+        return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
+    }
+
+    public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) throws Exception {
+        String url = "http://localhost:8080/polymarket/events";
+
+        // 1. Format the parameters for the POST body
+        String formData = "action=closeEvent&eventName=" + eventName + "&winningOption=" + winningOption;
+
+        // 2. Build the POST request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(formData))
+                .build();
+
+        // 3. Send the request
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Server error: " + response.statusCode());
+        }
+
+        // 4. Parse the returned JSON back into a CloseEventReceiptDTO
+        return new Gson().fromJson(response.body(), CloseEventReceiptDTO.class);
+    }
+
     public List<UserSummaryDTO> getUsersSummary() throws Exception
     {
         HttpRequest request = HttpRequest.newBuilder()
@@ -146,35 +218,62 @@ public class ClientUtil {
         }
     }
 
+    public boolean isUserMarketMaker(String username, String eventName) throws Exception {
+        // 1. Build the URL with both eventName and username parameters
+        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName
+                + "&action=isMarketMaker&username=" + username;
+
+        // 2. Build the GET request
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .build();
+
+        // 3. Send the request
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Server error: " + response.statusCode());
+        }
+
+        // 4. Parse the JSON response back into a boolean
+        return new Gson().fromJson(response.body(), Boolean.class);
+    }
+
 
     /**
      * A POST request matching your TradeServlet.
      * Because your Servlet uses request.getParameter()[cite: 17, 18], you must send the data 
      * as an application/x-www-form-urlencoded string (like a standard HTML form submission), NOT as a JSON body.
      */
-    public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, String tradeType, int amount, double priceLimit) throws Exception
-    {
+    public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) throws Exception {
+        String url = "http://localhost:8080/polymarket/events";
 
-        // Build the URL-encoded string matching your servlet's expected parameters
-        String formData = "userName=" + URLEncoder.encode(username, StandardCharsets.UTF_8) +
-                "&eventName=" + URLEncoder.encode(eventName, StandardCharsets.UTF_8) +
-                "&optionName=" + URLEncoder.encode(optionName, StandardCharsets.UTF_8) +
-                "&tradeType=" + URLEncoder.encode(tradeType, StandardCharsets.UTF_8) +
+        // 1. Format all parameters into a single form data string
+        String formData = "action=placeOrder" +
+                "&username=" + username +
+                "&eventName=" + eventName +
+                "&optionName=" + optionName +
                 "&amount=" + amount +
-                "&priceLimit=" + priceLimit;
+                "&actionType=" + action.name() +
+                "&limitPrice=" + limitPrice;
 
+        // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/tradeRequest"))
+                .uri(URI.create(url))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(formData))
                 .build();
 
+        // 3. Send the request
+        // (Assuming your HttpClient variable is named 'client')
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() == 200) {
-            return gson.fromJson(response.body(), TradeReceiptDTO.class);
-        } else {
-            throw new Exception("Trade failed: " + response.body());
+        if (response.statusCode() != 200) {
+            throw new RuntimeException("Server error: " + response.statusCode());
         }
+
+        // 4. Parse the returned JSON back into a TradeReceiptDTO
+        return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
     }
 }

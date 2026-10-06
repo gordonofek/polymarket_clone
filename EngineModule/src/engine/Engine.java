@@ -9,12 +9,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Engine implements EngineInterface {
 
     // כאן המנוע שומר את כל האירועים הפעילים והסגורים (למשל במפה לפי ID)
     private EventManager eventManager;
     private UserManager userManager;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public Engine() {
         this.eventManager = new EventManager();
@@ -23,279 +26,314 @@ public class Engine implements EngineInterface {
 
     @Override
     public void loadDataFromXML(InputStream fileContent) throws Exception {
-        // creates a new XML_loader obj, and then load XML from filePath
-        //XMLDataLoader loader = new XMLDataLoader();
-        List<Event> events = XMLDataLoader.loadData(fileContent);
-
-        eventManager.clearEvents();
-        eventManager.addEventList(events);
-
-        userManager.clearUsers();
+        lock.writeLock().lock();
+        try {
+            List<Event> events = XMLDataLoader.loadData(fileContent);
+            eventManager.clearEvents();
+            eventManager.addEventList(events);
+            //userManager.clearUsers();
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     @Override
     public boolean isDataLoaded() {
-        return !eventManager.isRegistryEmpty();
+        lock.readLock().lock();
+        try {
+            return !eventManager.isRegistryEmpty();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public List<EventSummaryDTO> getAllEvents() {
-        // using stream to turn all the Events into EventSummaryDTO,
-        // and then putting it in a list and returning it
-        return eventManager.getAllEvents().stream()
-                .map(event -> new EventSummaryDTO(
-                        event.getName(),
-                        event.getDescription(),
-                        event.getStatus().name(), // Converts the EventStatus enum to a String
-                        event.getCommissionPercent(),
-                        event.getCommissionType().name(),
-                        event.getOptions(),
-                        event.getEventTradingMethodType().name()
-                ))
-                .toList();
+        lock.readLock().lock();
+        try {
+            // using stream to turn all the Events into EventSummaryDTO,
+            // and then putting it in a list and returning it
+            return eventManager.getAllEvents().stream()
+                    .map(event -> new EventSummaryDTO(
+                            event.getName(),
+                            event.getDescription(),
+                            event.getStatus().name(), // Converts the EventStatus enum to a String
+                            event.getCommissionPercent(),
+                            event.getCommissionType().name(),
+                            event.getOptions(),
+                            event.getEventTradingMethodType().name()
+                    ))
+                    .toList();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public List<EventSummaryDTO> getActiveEvents() {
-        // using stream to turn all active Events into EventSummaryDTO,
-        // and then putting it in a list and returning it
-        List<EventSummaryDTO> list = new ArrayList<>();
+        lock.readLock().lock();
+        try {
+            // using stream to turn all active Events into EventSummaryDTO,
+            // and then putting it in a list and returning it
+            List<EventSummaryDTO> list = new ArrayList<>();
 
-        for (Event event : eventManager.getAllEvents()) {
-            // Only process the event if its status is OPEN
-            if (event.getStatus() == EventStatus.OPEN) {
-                EventSummaryDTO dto = new EventSummaryDTO(
-                        event.getName(),
-                        event.getDescription(),
-                        event.getStatus().name(), // Converts the EventStatus enum to a String
-                        event.getCommissionPercent(),
-                        event.getCommissionType().name(),
-                        event.getOptions(),
-                        event.getEventTradingMethodType().name()
-                );
-                list.add(dto);
+            for (Event event : eventManager.getAllEvents()) {
+                // Only process the event if its status is OPEN
+                if (event.getStatus() == EventStatus.OPEN) {
+                    EventSummaryDTO dto = new EventSummaryDTO(
+                            event.getName(),
+                            event.getDescription(),
+                            event.getStatus().name(), // Converts the EventStatus enum to a String
+                            event.getCommissionPercent(),
+                            event.getCommissionType().name(),
+                            event.getOptions(),
+                            event.getEventTradingMethodType().name()
+                    );
+                    list.add(dto);
+                }
             }
-        }
 
-        return list;
+            return list;
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public EventDetailsDTO getEventState(String eventName) {
-        // 1. Fetch the raw domain object from your data structure
-        Event event = eventManager.getEvent(eventName);
+        lock.readLock().lock();
+        try {
+            // 1. Fetch the raw domain object from your data structure
+            Event event = eventManager.getEvent(eventName);
 
-        // 2. Stream to calculate the total commission from the history
-        double totalCommission = event.getTradeHistory().stream()
-                .mapToDouble(trade -> trade.commissionPaid()) // assuming TradeResult has a commission() method
-                .sum();
+            // 2. Stream to calculate the total commission from the history
+            double totalCommission = event.getTradeHistory().stream()
+                    .mapToDouble(trade -> trade.commissionPaid()) // assuming TradeResult has a commission() method
+                    .sum();
 
-        // 3. Stream to build the List<OptionDetailsDTO>
-        List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
-                .map(optionName -> {
-                    double currentPrice = event.getOptionPrice(optionName);
-                    int sharesBought = event.getOptionShares(optionName); // Matches your DTO field name
+            // 3. Stream to build the List<OptionDetailsDTO>
+            List<OptionDetailsDTO> optionsDTOs = event.getOptions().stream()
+                    .map(optionName -> {
+                        double currentPrice = event.getOptionPrice(optionName);
+                        int sharesBought = event.getOptionShares(optionName); // Matches your DTO field name
 
-                    double bid = 0.0, ask = 0.0, mid = 0.0, spread = 0.0;
-                    List<PendingRequestDTO> buyQueue = new ArrayList<>();
-                    List<PendingRequestDTO> sellQueue = new ArrayList<>();
+                        double bid = 0.0, ask = 0.0, mid = 0.0, spread = 0.0;
+                        List<PendingRequestDTO> buyQueue = new ArrayList<>();
+                        List<PendingRequestDTO> sellQueue = new ArrayList<>();
 
-                    TradingMethods method = event.getTradingMethod();
+                        TradingMethods method = event.getTradingMethod();
 
-                    if (method instanceof OrderBookTradingMethod obMethod) {
-                        bid = obMethod.getHighestBid(optionName);
-                        ask = obMethod.getLowestAsk(optionName);
-                        mid = obMethod.getMidPrice(optionName);
-                        spread = obMethod.getSpread(optionName);
+                        if (method instanceof OrderBookTradingMethod obMethod) {
+                            bid = obMethod.getHighestBid(optionName);
+                            ask = obMethod.getLowestAsk(optionName);
+                            mid = obMethod.getMidPrice(optionName);
+                            spread = obMethod.getSpread(optionName);
 
-                        // Extract Buy Requests
-                        var rawBuyRequests = obMethod.get_option_buy_requests(optionName);
-                        for (var entry : rawBuyRequests.entrySet()) {
-                            for (TradeRequest req : entry.getValue()) {
-                                buyQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "BUY"));
+                            // Extract Buy Requests
+                            var rawBuyRequests = obMethod.get_option_buy_requests(optionName);
+                            for (var entry : rawBuyRequests.entrySet()) {
+                                for (TradeRequest req : entry.getValue()) {
+                                    buyQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "BUY"));
+                                }
+                            }
+
+                            // Extract Sell Requests
+                            var rawSellRequests = obMethod.get_option_sell_requests(optionName);
+                            for (var entry : rawSellRequests.entrySet()) {
+                                for (TradeRequest req : entry.getValue()) {
+                                    sellQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "SELL"));
+                                }
                             }
                         }
 
-                        // Extract Sell Requests
-                        var rawSellRequests = obMethod.get_option_sell_requests(optionName);
-                        for (var entry : rawSellRequests.entrySet()) {
-                            for (TradeRequest req : entry.getValue()) {
-                                sellQueue.add(new PendingRequestDTO(req.getUsername(), req.getAmount(), req.getLimitPrice(), "SELL"));
+                        // Return using the exact order of your OptionDetailsDTO fields
+                        return new OptionDetailsDTO(
+                                optionName, currentPrice, sharesBought,
+                                bid, ask, mid, spread,
+                                buyQueue, sellQueue
+                        );
+                    })
+                    .toList();
+
+            // 4. Stream to map the raw trade history to TradeRecordDTOs
+            List<TradeRecordDTO> historyDTOs = event.getTradeHistory().stream()
+                    .map(trade -> new TradeRecordDTO(
+                            trade.action(),
+                            trade.optionName(),
+                            trade.sharesProcessed(),
+                            trade.totalCost()
+                    ))
+                    .toList();
+
+            // 5. Figure out the winning option (null if not closed)
+            String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
+
+            // 6. Finally, return the new object using the constructor
+            return new EventDetailsDTO(
+                    event.getName(),
+                    event.getStatus().name(),
+                    event.getPoolValue(),
+                    totalCommission,
+                    optionsDTOs,
+                    historyDTOs,
+                    winner
+            );
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public List<ParticipantHoldingDTO> getEventParticipants(String eventName) {
+        lock.readLock().lock();
+        try {
+            Event event = eventManager.getEvent(eventName);
+            Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
+
+            List<ParticipantHoldingDTO> holdings = ledger.entrySet().stream()
+                    .map(entry -> {
+                                String participantName = entry.getKey();
+                                Map<String, Integer> shares = new HashMap<>(entry.getValue());
+                                return new ParticipantHoldingDTO(participantName, shares);
                             }
-                        }
+                    ).toList();
+
+            return holdings;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
+    @Override
+    public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) {
+        lock.writeLock().lock();
+        try {
+            Event event = eventManager.getEvent(eventName);
+            User initiatingUser = userManager.getUser(username);
+
+            // check if the user went into negative balance, if yes then he is blocked and thus can't trade.
+            if (initiatingUser.isBlocked()) {
+                return new TradeReceiptDTO(false, "User is blocked due to negative balance.", 0, 0);
+            }
+
+            // 1. Capture the LIST of results
+            List<TradeResult> results = event.processTrade(new TradeRequest(action, optionName, amount, limitPrice, username));
+
+            double totalCostForInitiator = 0.0;
+            double totalCommissionForInitiator = 0.0;
+            boolean overallSuccess = false;
+            String finalMessage = "Order processed";
+
+            // 2. Iterate through every receipt generated by this action
+            for (TradeResult res : results) {
+
+                if (!res.isSuccess()) {
+                    finalMessage = res.message();
+                    continue;
+                }
+
+                // Skip the "routed" placeholder messages (which have 0 shares) so we don't do empty math
+                if (res.sharesProcessed() == 0) {
+                    finalMessage = res.message();
+                    overallSuccess = true;
+                    continue;
+                }
+
+                overallSuccess = true;
+
+                // 3. Fetch the specific user for THIS receipt (could be the buyer or the seller!)
+                // Make sure your TradeResult uses orderId() or username() depending on your refactor!
+                User involvedUser = userManager.getUser(res.username());
+
+                // 4. Apply the financial changes AND update the Portfolio tracking maps
+                if (involvedUser != null) {
+                    if (res.action() == ActionType.BUY) {
+                        involvedUser.deductFunds(res.totalCost());
+                        involvedUser.addShares(eventName, res.optionName(), res.sharesProcessed());
+                        event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
+
+                        // Track Portfolio Data
+                        involvedUser.addCommissionPaid(eventName, res.commissionPaid());
+                        involvedUser.addOptionInvestment(eventName, res.optionName(), res.totalCost());
+
+                    } else if (res.action() == ActionType.SELL) {
+                        involvedUser.addFunds(res.totalCost());
+                        involvedUser.addShares(eventName, res.optionName(), -res.sharesProcessed());
+                        event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
+
+                        // Track Portfolio Data
+                        involvedUser.addOptionInvestment(eventName, res.optionName(), -res.totalCost());
                     }
 
-                    // Return using the exact order of your OptionDetailsDTO fields
-                    return new OptionDetailsDTO(
-                            optionName, currentPrice, sharesBought,
-                            bid, ask, mid, spread,
-                            buyQueue, sellQueue
-                    );
-                })
-                .toList();
-
-        // 4. Stream to map the raw trade history to TradeRecordDTOs
-        List<TradeRecordDTO> historyDTOs = event.getTradeHistory().stream()
-                .map(trade -> new TradeRecordDTO(
-                        trade.action(),
-                        trade.optionName(),
-                        trade.sharesProcessed(),
-                        trade.totalCost()
-                ))
-                .toList();
-
-        // 5. Figure out the winning option (null if not closed)
-        String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
-
-        // 6. Finally, return the new object using the constructor
-        return new EventDetailsDTO(
-                event.getName(),
-                event.getStatus().name(),
-                event.getPoolValue(),
-                totalCommission,
-                optionsDTOs,
-                historyDTOs,
-                winner
-        );
-    }
-
-    @Override
-    public List<ParticipantHoldingDTO> getEventParticipants(String eventName)
-    {
-        Event event = eventManager.getEvent(eventName);
-        Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
-
-        List<ParticipantHoldingDTO> holdings = ledger.entrySet().stream()
-                .map(entry -> {
-                    String participantName = entry.getKey();
-                    Map<String, Integer> shares = new HashMap<>(entry.getValue());
-                    return new ParticipantHoldingDTO(participantName, shares);
+                    // 5. Accumulate the costs/commissions ONLY for the user who initiated the request
+                    if (res.username().equals(username)) {
+                        totalCostForInitiator += res.totalCost();
+                        totalCommissionForInitiator += res.commissionPaid();
+                        finalMessage = res.message();
+                    }
                 }
-        ).toList();
 
-        return holdings;
-    }
-
-    @Override
-    public synchronized TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) {
-        Event event = eventManager.getEvent(eventName);
-        User initiatingUser = userManager.getUser(username);
-
-        // check if the user went into negative balance, if yes then he is blocked and thus can't trade.
-        if (initiatingUser.isBlocked()) {
-            return new TradeReceiptDTO(false, "User is blocked due to negative balance.", 0, 0);
+                // Pay the Market Maker any ON_PURCHASE commissions
+                if (res.commissionPaid() > 0) {
+                    User marketMaker = userManager.getUser(event.getMarketMaker());
+                    if (marketMaker != null) {
+                        marketMaker.addFunds(res.commissionPaid());
+                    }
+                }
+            }
+            // 6. Return the summary DTO
+            return new TradeReceiptDTO(overallSuccess, finalMessage, totalCostForInitiator, totalCommissionForInitiator);
+        } finally {
+            lock.writeLock().unlock();
         }
-
-        // 1. Capture the LIST of results
-        List<TradeResult> results = event.processTrade(new TradeRequest(action, optionName, amount, limitPrice, username));
-
-        double totalCostForInitiator = 0.0;
-        double totalCommissionForInitiator = 0.0;
-        boolean overallSuccess = false;
-        String finalMessage = "Order processed";
-
-        // 2. Iterate through every receipt generated by this action
-        for (TradeResult res : results) {
-
-            if (!res.isSuccess()) {
-                finalMessage = res.message();
-                continue;
-            }
-
-            // Skip the "routed" placeholder messages (which have 0 shares) so we don't do empty math
-            if (res.sharesProcessed() == 0) {
-                finalMessage = res.message();
-                overallSuccess = true;
-                continue;
-            }
-
-            overallSuccess = true;
-
-            // 3. Fetch the specific user for THIS receipt (could be the buyer or the seller!)
-            // Make sure your TradeResult uses orderId() or username() depending on your refactor!
-            User involvedUser = userManager.getUser(res.username());
-
-            // 4. Apply the financial changes AND update the Portfolio tracking maps
-            if (involvedUser != null) {
-                if (res.action() == ActionType.BUY) {
-                    involvedUser.deductFunds(res.totalCost());
-                    involvedUser.addShares(eventName, res.optionName(), res.sharesProcessed());
-                    event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
-
-                    // Track Portfolio Data
-                    involvedUser.addCommissionPaid(eventName, res.commissionPaid());
-                    involvedUser.addOptionInvestment(eventName, res.optionName(), res.totalCost());
-
-                } else if (res.action() == ActionType.SELL) {
-                    involvedUser.addFunds(res.totalCost());
-                    involvedUser.addShares(eventName, res.optionName(), -res.sharesProcessed());
-                    event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
-
-                    // Track Portfolio Data
-                    involvedUser.addOptionInvestment(eventName, res.optionName(), -res.totalCost());
-                }
-
-                // 5. Accumulate the costs/commissions ONLY for the user who initiated the request
-                if (res.username().equals(username)) {
-                    totalCostForInitiator += res.totalCost();
-                    totalCommissionForInitiator += res.commissionPaid();
-                    finalMessage = res.message();
-                }
-            }
-
-            // Pay the Market Maker any ON_PURCHASE commissions
-            if (res.commissionPaid() > 0) {
-                User marketMaker = userManager.getUser(event.getMarketMaker());
-                if (marketMaker != null) {
-                    marketMaker.addFunds(res.commissionPaid());
-                }
-            }
-        }
-
-        // 6. Return the summary DTO
-        return new TradeReceiptDTO(overallSuccess, finalMessage, totalCostForInitiator, totalCommissionForInitiator);
     }
 
     @Override
     public TradeReceiptDTO startEvent(String username, String eventName) {
-        Event event = eventManager.getEvent(eventName);
-        User user = userManager.getUser(username);
+        lock.writeLock().lock();
+        try {
+            Event event = eventManager.getEvent(eventName);
+            User user = userManager.getUser(username);
 
-        if (event.getStatus() != EventStatus.NOT_STARTED) {
-            return new TradeReceiptDTO(false, "Event is already active.",0,0);
-        }
-        double cost = 0;
-        int sharesToGive = 0;
-
-        TradingMethods method = event.getTradingMethod();
-        if(method instanceof OrderBookTradingMethod ob) {
-            cost = ob.getInitialInvestment();
-            sharesToGive = (int) (cost / ob.getBaseValue());
-        }
-        // LMSR
-        else {
-            cost = method.getPoolValue();
-        }
-
-        if (user.getBalance() < cost) {
-            return new TradeReceiptDTO(false, String.format("Insufficient funds! You need $%.2f to start the event.", cost),0 ,0);
-        }
-        // deducting funds and opening the event
-        user.deductFunds(cost);
-        event.openEvent();
-
-        // granting the market maker the initial order book shares for EVERY option
-        if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
-            for (String optionName : event.getOptions()) {
-                user.addShares(eventName, optionName, sharesToGive);
-                event.recordParticipant(username, optionName, sharesToGive);
+            if (event.getStatus() != EventStatus.NOT_STARTED) {
+                return new TradeReceiptDTO(false, "Event is already active.",0,0);
             }
+            double cost = 0;
+            int sharesToGive = 0;
+
+            TradingMethods method = event.getTradingMethod();
+            if(method instanceof OrderBookTradingMethod ob) {
+                cost = ob.getInitialInvestment();
+                sharesToGive = (int) (cost / ob.getBaseValue());
+            }
+            // LMSR
+            else {
+                cost = method.getPoolValue();
+            }
+
+            if (user.getBalance() < cost) {
+                return new TradeReceiptDTO(false, String.format("Insufficient funds! You need $%.2f to start the event.", cost),0 ,0);
+            }
+            // deducting funds and opening the event
+            user.deductFunds(cost);
+            event.openEvent();
+
+            // granting the market maker the initial order book shares for EVERY option
+            if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
+                for (String optionName : event.getOptions()) {
+                    user.addShares(eventName, optionName, sharesToGive);
+                    event.recordParticipant(username, optionName, sharesToGive);
+                }
+            }
+            return new TradeReceiptDTO(true, "Event started successfully!", cost, 0);
+        } finally {
+            lock.writeLock().unlock();
         }
-        return new TradeReceiptDTO(true, "Event started successfully!", cost, 0);
     }
 
     @Override
     public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) {
+        lock.writeLock().lock();
         try {
             // fetch the event
             Event event = eventManager.getEvent(eventName);
@@ -337,7 +375,6 @@ public class Engine implements EngineInterface {
                 }
             }
 
-
             // returns the successful receipt
             return new CloseEventReceiptDTO(
                     true,
@@ -357,105 +394,141 @@ public class Engine implements EngineInterface {
                     0,
                     0
             );
+        } finally {
+            lock.writeLock().unlock();
         }
     }
 
     public List<UserSummaryDTO> getAllUsers() {
-        return this.userManager.getAllUsers().stream()
-                .map(user -> new UserSummaryDTO(user.getName(), user.getBalance()))
-                .toList();
+        lock.readLock().lock();
+        try {
+            return this.userManager.getAllUsers().stream()
+                    .map(user -> new UserSummaryDTO(user.getName(), user.getBalance()))
+                    .toList();
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     public UserDetailsDTO getUserDetails(String username) {
-        User user = this.userManager.getUser(username);
-        if (user == null) {
-            throw new IllegalArgumentException("User" + username + " not found");
-        }
-        List<PortfolioItemDTO> portfolio = new ArrayList<>();
-        if (user.getPortfolio() != null) {
-            for (Map.Entry<String, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
-                String eventName = eventEntry.getKey();
+        lock.readLock().lock();
+        try {
+            User user = this.userManager.getUser(username);
+            if (user == null) {
+                throw new IllegalArgumentException("User" + username + " not found");
+            }
+            List<PortfolioItemDTO> portfolio = new ArrayList<>();
+            if (user.getPortfolio() != null) {
+                for (Map.Entry<String, Map<String, Integer>> eventEntry : user.getPortfolio().entrySet()) {
+                    String eventName = eventEntry.getKey();
 
-                Event event = this.eventManager.getEvent(eventName);
+                    Event event = this.eventManager.getEvent(eventName);
 
-                for (Map.Entry<String, Integer> optionEntry : eventEntry.getValue().entrySet()) {
-                    String optionName = optionEntry.getKey();
-                    int shares = optionEntry.getValue();
+                    for (Map.Entry<String, Integer> optionEntry : eventEntry.getValue().entrySet()) {
+                        String optionName = optionEntry.getKey();
+                        int shares = optionEntry.getValue();
 
-                    // Only add to the UI if they actually own shares (amount > 0)
-                    if (shares > 0) {
-                        String statusStr = (event != null) ? event.getStatus().name() : "UNKNOWN";
+                        // Only add to the UI if they actually own shares (amount > 0)
+                        if (shares > 0) {
+                            String statusStr = (event != null) ? event.getStatus().name() : "UNKNOWN";
 
-                        // Calculate Profil/Loss if closed, or show 0.0 if still open
-                        double profitLoss = 0.0;
-                        if (event != null && event.getStatus() == EventStatus.CLOSED) {
-                            UserEventOverviewDTO overview = getUserEventOverview(user.getName(), eventName);
-                            profitLoss = overview.profitLoss();
+                            // Calculate Profil/Loss if closed, or show 0.0 if still open
+                            double profitLoss = 0.0;
+                            if (event != null && event.getStatus() == EventStatus.CLOSED) {
+                                UserEventOverviewDTO overview = getUserEventOverview(user.getName(), eventName);
+                                profitLoss = overview.profitLoss();
+                            }
+
+                            portfolio.add(new PortfolioItemDTO(eventName, optionName, shares, statusStr, profitLoss));
                         }
-
-                        portfolio.add(new PortfolioItemDTO(eventName, optionName, shares, statusStr, profitLoss));
                     }
                 }
             }
+            return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
+        } finally {
+            lock.readLock().unlock();
         }
-        return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
     }
 
     public boolean addUser(String username) {
-        // ה-Engine פשוט מגלגל את הבקשה למנהל הרלוונטי
-        return this.userManager.addIfNotExists(username);
+        lock.writeLock().lock();
+        try {
+            return this.userManager.addIfNotExists(username);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     @Override
     public UserEventOverviewDTO getUserEventOverview(String username, String eventName) {
-        User user = userManager.getUser(username);
-        Event event = eventManager.getEvent(eventName);
+        lock.readLock().lock();
+        try {
+            User user = userManager.getUser(username);
+            Event event = eventManager.getEvent(eventName);
 
-        double commission = user.getCommissionPaidForEvent(eventName);
-        double payout = user.getPayoutForEvent(eventName);
+            double commission = user.getCommissionPaidForEvent(eventName);
+            double payout = user.getPayoutForEvent(eventName);
 
-        // calculates total investment for this event
-        double totalInvestment = 0.0;
-        Map<String, Double> investments = user.getOptionInvestments().getOrDefault(eventName, new java.util.HashMap<>());
-        for (double amount : investments.values()) {
-            totalInvestment += amount;
+            // calculates total investment for this event
+            double totalInvestment = 0.0;
+            Map<String, Double> investments = user.getOptionInvestments().getOrDefault(eventName, new java.util.HashMap<>());
+            for (double amount : investments.values()) {
+                totalInvestment += amount;
+            }
+
+            // calculates profit/loss (Payout received minus total money spent)
+            double profitLoss = payout - totalInvestment;
+
+            // find the winner if closed
+            String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
+
+            List<TradeRecordDTO> history = event.getTradeHistory().stream()
+                    .filter(trade -> trade.username().equals(username))
+                    .map(trade -> new TradeRecordDTO(
+                            trade.action(),
+                            trade.optionName(),
+                            trade.sharesProcessed(),
+                            trade.totalCost()
+                    ))
+                    .toList();
+
+            return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner);
+        } finally {
+            lock.readLock().unlock();
         }
-
-        // calculates profit/loss (Payout received minus total money spent)
-        double profitLoss = payout - totalInvestment;
-
-        // find the winner if closed
-        String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
-
-        List<TradeRecordDTO> history = event.getTradeHistory().stream()
-                .filter(trade -> trade.username().equals(username))
-                .map(trade -> new TradeRecordDTO(
-                        trade.action(),
-                        trade.optionName(),
-                        trade.sharesProcessed(),
-                        trade.totalCost()
-                ))
-                .toList();
-
-        return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner);
     }
 
     @Override
     public boolean isUserMarketMaker(String username, String eventName) {
-        if (username == null) return false;
-        User user = this.userManager.getUser(username);
-        return user != null && user.isMarketMakerFor(eventName); // Using the method you already wrote!
+        lock.readLock().lock();
+        try {
+            if (username == null) return false;
+            User user = this.userManager.getUser(username);
+            return user != null && user.isMarketMakerFor(eventName); // Using the method you already wrote!
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     @Override
     public void loadState(String filePath) {
-        // דורסים את המנהל הישן בזה שנטען מהקובץ
-        this.eventManager = FileHandler.loadState(filePath);
+        lock.writeLock().lock();
+        try {
+            // דורסים את המנהל הישן בזה שנטען מהקובץ
+            this.eventManager = FileHandler.loadState(filePath);
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     @Override
     public void saveState(String filePath) {
-        // המנוע פשוט מעביר את ה-manager שלו ל-FileHandler
-        FileHandler.saveState(this.eventManager, filePath);
+        lock.readLock().lock();
+        try {
+            // המנוע פשוט מעביר את ה-manager שלו ל-FileHandler
+            FileHandler.saveState(this.eventManager, filePath);
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 }

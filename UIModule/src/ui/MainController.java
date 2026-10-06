@@ -1,6 +1,5 @@
 package ui;
 
-import engine.EngineInterface;
 import engine.dto.*;
 
 import javafx.beans.binding.Bindings;
@@ -25,7 +24,6 @@ import java.util.List;
 public class MainController {
 
     private final AppState state = new AppState();
-    private final EngineInterface engine = state.getEngine();
 
     // Top part
     @FXML private Button loadFileBtn;
@@ -124,7 +122,12 @@ public class MainController {
                 loadFileBtn.setDisable(false);
                 filePathField.setText("Loaded: " + selectedFile.getName());
 
-                // כאן תוכל להקפיץ Alert של הצלחה ולרענן את רשימת האירועים במסך!
+                // Show a success message
+                UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "File uploaded and loaded successfully!", state.getThemeStylesheets());
+
+                // Refresh the events tab with the new data from the server
+                eventsTabContentController.updateEvents();
+                usersTabContentController.refresh();
             });
 
             // מה לעשות אם ההעלאה נכשלה
