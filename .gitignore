@@ -23,8 +23,14 @@
 hs_err_pid*
 replay_pid*
 
-# IntelliJ IDEA
-.idea/
-*.iml
+# External libraries (JavaFX, JAXB, Gson) live outside the repo, see README ($LIBS$)
+lib/
+
+# IntelliJ IDEA (project structure is shared, personal workspace settings are not)
 *.iws
 out/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/vcs.xml
+.idea/dictionaries/
