@@ -67,8 +67,8 @@ public class MainController {
     public void loadData(List<EventSummaryDTO> events)
     {
         // clear the selected event and user so nothing points at the previously loaded file
+        // the logged in user stays the same, only the users tab view is cleared
         eventsTabContentController.reset();
-        state.setActiveUser(null);
         usersTabContentController.reset();
 
         eventsTabContentController.showEvents(events);
@@ -142,6 +142,10 @@ public class MainController {
             // הפעלת ה-Task בת'רד נפרד
             new Thread(uploadTask).start();
         }
+    }
+
+    public void setLoggedInUser(String username) {
+        state.setActiveUser(username);
     }
 
 }

@@ -17,7 +17,7 @@ public class LoginServlet extends HttpServlet {
         Engine engine = (Engine) getServletContext().getAttribute("engine");
 
         // 2. קריאת הפרמטר מהלקוח
-        String username = request.getParameter("userName");
+        String username = request.getParameter("username");
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
