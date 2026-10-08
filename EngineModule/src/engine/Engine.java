@@ -5,10 +5,7 @@ import engine.dto.*;
 import engine.files.FileHandler;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -28,10 +25,9 @@ public class Engine implements EngineInterface {
     public void loadDataFromXML(InputStream fileContent) throws Exception {
         lock.writeLock().lock();
         try {
-            List<Event> events = XMLDataLoader.loadData(fileContent);
-            eventManager.clearEvents();
+            Set<String> names = eventManager.getAllEventNames();
+            List<Event> events = XMLDataLoader.loadData(fileContent, names);
             eventManager.addEventList(events);
-            //userManager.clearUsers();
         } finally {
             lock.writeLock().unlock();
         }

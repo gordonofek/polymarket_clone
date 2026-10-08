@@ -1,10 +1,7 @@
 package internals;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class EventManager implements Serializable {
     private Map<String, Event> eventRegistry;
@@ -43,13 +40,17 @@ public class EventManager implements Serializable {
     }
 
     // checks if the event with the id is in the registry
-    public boolean hasEvent(int id) {
-        return this.eventRegistry.containsKey(id);
+    public boolean hasEvent(String name) {
+        return this.eventRegistry.containsKey(name);
     }
 
     // returns all the events in the registry
     public Collection<Event> getAllEvents() {
         return this.eventRegistry.values();
+    }
+
+    public Set<String> getAllEventNames() {
+        return new HashSet<>(this.eventRegistry.keySet());
     }
 
     // clears all the events in the registry

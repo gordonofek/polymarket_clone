@@ -5,6 +5,7 @@ import internals.ActionType;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 
 public interface EngineInterface {
 

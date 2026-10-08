@@ -19,11 +19,11 @@ import java.util.*;
 public class XMLDataLoader {
 
 
-public static List<Event> loadData(InputStream fileContent) throws Exception {
+public static List<Event> loadData(InputStream fileContent, Set<String> existingSystemEvents) throws Exception {
     GuessMarket guessMarket = loadGuessMarket (fileContent);
 
     // 3. הפעלת שרשרת הפונקציות
-    List<Event> engineEvents = parseEvents(guessMarket);
+    List<Event> engineEvents = parseEvents(guessMarket, existingSystemEvents);
 
     return engineEvents;
 }
@@ -54,7 +54,7 @@ public static GuessMarket loadGuessMarket (InputStream fileContent) throws Excep
     return guessMarket;
 }
 
-private static List<Event> parseEvents(GuessMarket guessMarket) throws InvalidXMLException{
+private static List<Event> parseEvents(GuessMarket guessMarket, Set<String> existingSystemEvents) throws InvalidXMLException{
     // 2. וולידציה והמרה לאובייקטי מנוע
     List<Event> engineEvents = new ArrayList<>();
 
@@ -69,12 +69,12 @@ private static List<Event> parseEvents(GuessMarket guessMarket) throws InvalidXM
 
         // --- וולידציה (Application-wise) ---
 
-        // --- וולידציה של שמות כפולים ---
-        if (uniqueEventNames.contains(fullEventName)) {
-            throw new InvalidXMLException("Duplicate event name found in XML: '" + fullEventName + "'. Event names must be unique.");
+
+
+        if (existingSystemEvents.contains(fullEventName) || uniqueEventNames.contains(fullEventName)) {
+            throw new InvalidXMLException("Duplicate event name found: '" + fullEventName + "'. Event names must be unique in the system.");
         }
         uniqueEventNames.add(fullEventName);
-
 
         // בדיקת עמלה בין 0 ל-90
         int commission = xmlEvent.getCommission().getValue();
