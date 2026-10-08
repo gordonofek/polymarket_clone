@@ -1,4 +1,4 @@
-package internals;
+package dto;
 
 public enum ActionType {
     BUY,

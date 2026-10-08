@@ -1,7 +1,8 @@
 package engine;
+
+import dto.*;
 import internals.*;
 
-import engine.dto.*;
 import engine.files.FileHandler;
 
 import java.io.InputStream;

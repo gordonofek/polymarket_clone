@@ -2,9 +2,9 @@ package servlets;
 
 import com.google.gson.Gson;
 import engine.Engine;
-import engine.dto.UserDetailsDTO;
-import engine.dto.UserEventOverviewDTO;
-import engine.dto.UserSummaryDTO;
+import dto.UserDetailsDTO;
+import dto.UserEventOverviewDTO;
+import dto.UserSummaryDTO;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;

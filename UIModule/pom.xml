@@ -14,9 +14,10 @@
     <packaging>jar</packaging>
 
     <dependencies>
+        <!-- the client only knows the DTOs, never the engine; it talks to the server over HTTP -->
         <dependency>
             <groupId>polymarket</groupId>
-            <artifactId>engine</artifactId>
+            <artifactId>dto</artifactId>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>

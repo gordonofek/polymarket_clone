@@ -1,8 +1,8 @@
 package ui.network;
+
+import dto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import engine.dto.*;
-import internals.ActionType;
 
 import java.io.File;
 import java.net.URI;

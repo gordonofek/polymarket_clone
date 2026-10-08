@@ -1,6 +1,6 @@
 package ui;
 
-import engine.dto.*;
+import dto.*;
 
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;

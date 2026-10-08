@@ -1,11 +1,10 @@
 package engine;
 
-import engine.dto.*;
-import internals.ActionType;
+import dto.*;
+
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 
 public interface EngineInterface {
 

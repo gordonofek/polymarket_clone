@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>DtoModule</module>
         <module>EngineModule</module>
         <module>UIModule</module>
         <module>web</module>
@@ -29,6 +30,11 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>polymarket</groupId>
+                <artifactId>dto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>polymarket</groupId>
                 <artifactId>engine</artifactId>

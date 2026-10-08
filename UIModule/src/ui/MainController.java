@@ -1,6 +1,6 @@
 package ui;
 
-import engine.dto.*;
+import dto.*;
 
 import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;

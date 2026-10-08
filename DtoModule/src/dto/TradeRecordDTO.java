@@ -1,6 +1,5 @@
-package engine.dto;
+package dto;
 
-import internals.ActionType;
 
 public record TradeRecordDTO(
         ActionType action, // תומך גם במכירה בעתיד

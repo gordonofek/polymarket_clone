@@ -1,4 +1,4 @@
-package engine.dto;
+package dto;
 
 import java.util.List;
 

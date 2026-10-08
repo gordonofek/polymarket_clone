@@ -1,5 +1,7 @@
 package internals;
 
+import dto.ActionType;
+
 import java.io.Serializable;
 
 public record TradeResult(String orderId, String username,
