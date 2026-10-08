@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * Controller for the Users tab (users-tab.fxml).
- * Picking a user here sets the active user in AppState, which the rest of the UI listens to.
+ * Picking a user here only shows that user's details; the active (logged in) user never changes.
  */
 public class UsersTabController {
 
@@ -50,6 +50,9 @@ public class UsersTabController {
     private AppState state;
     private ClientUtil clientUtil;
     private Timeline autoRefresher;
+
+    // the user whose details are shown (null = show the logged in user)
+    private String viewedUser;
 
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
@@ -82,11 +85,13 @@ public class UsersTabController {
         {
             // This block safely runs back on the JavaFX UI Thread
             List<UserSummaryDTO> users = fetchUsersTask.getValue();
+            // set before setAll, so re-selecting the row below doesn't count as a new click
+            String userToShow = viewedUser != null ? viewedUser : state.getActiveUser();
+            viewedUser = userToShow;
             usersTableView.getItems().setAll(users);
-            String activeUser = state.getActiveUser();
-            if (activeUser != null) {
+            if (userToShow != null) {
                 for (UserSummaryDTO user : users) {
-                    if (user.name().equals(activeUser)) {
+                    if (user.name().equals(userToShow)) {
                         usersTableView.getSelectionModel().select(user);
                         loadUserDetails(user);
                         break;
@@ -107,8 +112,9 @@ public class UsersTabController {
 
     // clears everything shown for the previously selected user
     public void reset() {
+        viewedUser = null;
         usersTableView.getSelectionModel().clearSelection();
-        userNameLabel.setText("Select a user...");
+        //userNameLabel.setText("Select a user...");
         userBalanceLabel.setText("$0.00");
         portfolioTableView.getItems().clear();
         userEventOptionsBox.getChildren().clear();
@@ -254,10 +260,10 @@ public class UsersTabController {
         usersTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
 
         usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
+            // only a click on a different user loads new details (refresh() re-selects the same one)
+            if (newSelection != null && !newSelection.name().equals(viewedUser)) {
+                viewedUser = newSelection.name();
                 loadUserDetails(newSelection);
-                // the Events tab listens to this and updates itself
-                state.setActiveUser(newSelection.name());
             }
         });
     }
@@ -304,7 +310,7 @@ public class UsersTabController {
                             .orElse(null);
 
                     if (selectedPortfolioEvent != null) {
-                        populateUserEventOverview(selectedPortfolioEvent, state.getActiveUser());
+                        populateUserEventOverview(selectedPortfolioEvent, viewedUser);
                     }
                 });
 
