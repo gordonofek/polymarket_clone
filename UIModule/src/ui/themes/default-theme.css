@@ -366,7 +366,6 @@
 .tab-pane .tab:selected .tab-label {
     -fx-text-fill: #2854b5;
 }
-.tab-pane .tab:focus,
 .tab-pane:focused .tab:selected {
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
