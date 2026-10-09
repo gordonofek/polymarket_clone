@@ -15,6 +15,7 @@ public class MarketEvent implements Event, Serializable {
     protected String winningOption;
     protected EventStatus status;
     protected TradingMethods tradingMethod;
+    private int version = 0;
 
     // username -> (optionName -> amount of shares)
     protected Map<String, Map<String, Integer>> participantsHoldings = new HashMap<>();
@@ -40,7 +41,11 @@ public class MarketEvent implements Event, Serializable {
         this.tradingMethod = tradingMethod;
         this.status = EventStatus.NOT_STARTED;
         this.winningOption = null;
+        this.version = 0;
     }
+
+    public int getVersion() { return version; }
+    public void setVersion(int version) { this.version = version; }
 
     @Override
     public String getName() { return this.name; }
