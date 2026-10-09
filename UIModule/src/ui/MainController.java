@@ -32,6 +32,10 @@ public class MainController {
 
     // Tab
     @FXML private Tab usersTab;
+    @FXML private Tab profileTab;
+
+    // Profile tab (profile-tab.fxml), injected from <fx:include fx:id="profileTabContent">
+    @FXML private ProfileTabController profileTabContentController;
 
     // Events tab (events-tab.fxml), injected from <fx:include fx:id="eventsTabContent">
     @FXML private EventsTabController eventsTabContentController;
@@ -55,6 +59,7 @@ public class MainController {
         // all tabs share the same state
         eventsTabContentController.init(state);
         usersTabContentController.init(state);
+        profileTabContentController.init(state);
         settingsTabContentController.init(state);
 
         if (usersTab != null) {
@@ -62,6 +67,9 @@ public class MainController {
                 if (isNowSelected) usersTabContentController.refresh();
             });
         }
+        profileTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) profileTabContentController.refresh();
+        });
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -70,9 +78,11 @@ public class MainController {
         // the logged in user stays the same, only the users tab view is cleared
         eventsTabContentController.reset();
         usersTabContentController.reset();
+        profileTabContentController.reset();
 
         eventsTabContentController.showEvents(events);
         usersTabContentController.refresh();
+        profileTabContentController.refresh();
     }
 
     @FXML
@@ -128,6 +138,7 @@ public class MainController {
                 // Refresh the events tab with the new data from the server
                 eventsTabContentController.updateEvents();
                 usersTabContentController.refresh();
+                profileTabContentController.refresh();
             });
 
             // מה לעשות אם ההעלאה נכשלה

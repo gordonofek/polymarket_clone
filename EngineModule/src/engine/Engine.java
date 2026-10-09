@@ -58,7 +58,8 @@ public class Engine implements EngineInterface {
                             event.getCommissionPercent(),
                             event.getCommissionType().name(),
                             event.getOptions(),
-                            event.getEventTradingMethodType().name()
+                            event.getEventTradingMethodType().name(),
+                            event.getMarketMaker()
                     ))
                     .toList();
         } finally {
@@ -84,7 +85,8 @@ public class Engine implements EngineInterface {
                             event.getCommissionPercent(),
                             event.getCommissionType().name(),
                             event.getOptions(),
-                            event.getEventTradingMethodType().name()
+                            event.getEventTradingMethodType().name(),
+                            event.getMarketMaker()
                     );
                     list.add(dto);
                 }

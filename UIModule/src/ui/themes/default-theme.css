@@ -35,6 +35,35 @@
 }
 
 /* =========================================
+   PROFILE & USERS TAB (PART 3 ADDITIONS)
+========================================= */
+.transparent-split-pane {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.transparent-split-pane > .split-pane-divider {
+    -fx-background-color: transparent;
+}
+
+.profile-info-box {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 15;
+}
+
+.user-banner {
+    -fx-background-color: #eef2ff;
+    -fx-border-color: #c7d2fe;
+}
+
+.user-banner .main-app-title {
+    -fx-text-fill: #3730a3;
+}
+
+/* =========================================
    EVENTS TAB STYLING
 ========================================= */
 .event-tile {

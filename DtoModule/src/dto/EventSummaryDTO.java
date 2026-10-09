@@ -9,5 +9,6 @@ public record EventSummaryDTO(
         int commission,
         String commissionType,
         List<String> options,
-        String tradingMethodType
+        String tradingMethodType,
+        String marketMaker // null until someone starts the event
 ) {}

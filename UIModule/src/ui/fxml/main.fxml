@@ -59,6 +59,13 @@
                </content>
             </Tab>
 
+            <!-- ==================== PROFILE TAB ==================== -->
+            <Tab fx:id="profileTab" text="Profile">
+               <content>
+                  <fx:include fx:id="profileTabContent" source="profile-tab.fxml" />
+               </content>
+            </Tab>
+
             <!-- ==================== USERS TAB ==================== -->
             <Tab fx:id="usersTab" text="Users">
                <content>
