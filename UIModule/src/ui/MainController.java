@@ -67,6 +67,7 @@ public class MainController {
                 if (isNowSelected) usersTabContentController.refresh();
             });
         }
+        startDeltaFetching();
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -160,6 +161,8 @@ public class MainController {
                         // 1. השרת החזיר מידע! מעדכנים את הגרסה המקומית
                         state.setLocalVersion(deltaDTO.serverVersion());
 
+
+                        System.out.println("CLIENT: Got Delta! New local version: " + state.getLocalVersion() + " | Events updated: " + deltaDTO.updatedEvents().size());
                         // 2. מחלקים את העבודה לכרטיסיות:
 
                         // א. עדכון טבלת האירועים המרכזית (רק מה שהשתנה!)

@@ -24,11 +24,26 @@ public class EventsServlet extends HttpServlet
 
         response.setContentType("application/json");
 
+        // ======= החלק החדש של ה-Delta Fetching =======
         if (eventName == null) {
-            // SCENARIO 1: Return ALL events summary
-            List<EventSummaryDTO> eventsSummaries = engine.getAllEvents();
-            response.getWriter().write(new Gson().toJson(eventsSummaries));
+            String versionStr = request.getParameter("version");
+
+            if (versionStr != null) {
+                // SCENARIO 1: Delta Fetching
+                int clientVersion = Integer.parseInt(versionStr);
+                EventsDeltaDTO delta = engine.getEventsDelta(clientVersion);
+
+                // === פה נמצאת ההדפסה של השרת שביקשת! ===
+                System.out.println("SERVER: Client asked for version " + clientVersion + " | Sending " + delta.updatedEvents().size() + " updated events.");
+
+                response.getWriter().write(new Gson().toJson(delta));
+            } else {
+                // SCENARIO 1.5: משיכה מלאה רגילה
+                List<EventSummaryDTO> eventsSummaries = engine.getAllEvents();
+                response.getWriter().write(new Gson().toJson(eventsSummaries));
+            }
         }
+        // ======= כל שאר התרחישים הישנים שנשארים בדיוק כמו שהיו =======
         else if ("participants".equals(action)) {
             // SCENARIO 2: Return ONLY the participants for the requested event
             List<ParticipantHoldingDTO> participants = engine.getEventParticipants(eventName);

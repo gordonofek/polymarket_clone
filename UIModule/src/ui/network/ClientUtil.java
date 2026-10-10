@@ -117,26 +117,23 @@ public class ClientUtil {
     }
 
     public List<ParticipantHoldingDTO> getEventParticipants(String eventName) throws Exception {
-        // 1. Build the URL with the eventName AND the action parameter
-        // Make sure to match your actual server base URL and port!
-        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName + "&action=participants";
+        // עוטפים את ה-eventName ב-URLEncoder כדי למנוע שגיאות עם רווחים
+        String encodedEventName = URLEncoder.encode(eventName, StandardCharsets.UTF_8);
+        String url = BASE_URL + "/events?eventName=" + encodedEventName + "&action=participants";
 
-        // 2. Build the request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
                 .build();
 
-        // 3. Send the request and wait for the response
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new RuntimeException("Server error: " + response.statusCode());
         }
 
-        // 4. Parse the JSON array back into a List of ParticipantHoldingDTOs
         Type listType = new TypeToken<List<ParticipantHoldingDTO>>(){}.getType();
-        return new Gson().fromJson(response.body(), listType);
+        return gson.fromJson(response.body(), listType);
     }
 
     public TradeReceiptDTO startEvent(String username, String eventName) throws Exception {
@@ -244,25 +241,25 @@ public class ClientUtil {
     }
 
     public boolean isUserMarketMaker(String username, String eventName) throws Exception {
-        // 1. Build the URL with both eventName and username parameters
-        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName
-                + "&action=isMarketMaker&username=" + username;
+        // עוטפים גם את ה-username וגם את ה-eventName ב-URLEncoder
+        String encodedEventName = URLEncoder.encode(eventName, StandardCharsets.UTF_8);
+        String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
 
-        // 2. Build the GET request
+        String url = BASE_URL + "/events?eventName=" + encodedEventName
+                + "&action=isMarketMaker&username=" + encodedUsername;
+
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
                 .build();
 
-        // 3. Send the request
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new RuntimeException("Server error: " + response.statusCode());
         }
 
-        // 4. Parse the JSON response back into a boolean
-        return new Gson().fromJson(response.body(), Boolean.class);
+        return gson.fromJson(response.body(), Boolean.class);
     }
 
 
