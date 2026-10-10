@@ -27,6 +27,7 @@ public class MainController {
     @FXML private ProgressBar progressBar;
 
     // Tab
+    @FXML private Tab eventsTab;
     @FXML private Tab usersTab;
     @FXML private Tab profileTab;
 
@@ -63,6 +64,10 @@ public class MainController {
                 if (isNowSelected) usersTabContentController.refresh();
             });
         }
+        // balance and prices may have changed in another tab (deposit/withdraw) or by other users
+        eventsTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) eventsTabContentController.updateEvents();
+        });
         profileTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
             if (isNowSelected) profileTabContentController.refresh();
         });
@@ -137,6 +142,10 @@ public class MainController {
 
     public void setLoggedInUser(String username) {
         state.setActiveUser(username);
+
+        // the server may already have events (uploaded by other users); the Events tab
+        // starts selected, so its tab listener won't fire, so load them here
+        eventsTabContentController.updateEvents();
     }
 
 }

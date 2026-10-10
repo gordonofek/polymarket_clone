@@ -9,6 +9,7 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
@@ -58,6 +59,9 @@ public class ProfileTabController {
     // the portfolio row whose overview is shown
     private PortfolioItemDTO viewedItem;
 
+    // balance from the last refresh, shown in the deposit/withdraw dialog
+    private double currentBalance;
+
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
         this.state = state;
@@ -93,6 +97,7 @@ public class ProfileTabController {
         {
             UserDetailsDTO details = fetchUserDTOTask.getValue();
             profileUsernameLabel.setText(details.name());
+            currentBalance = details.balance();
             profileBalanceLabel.setText(String.format("$%.2f", details.balance()));
 
             // keep the selected row (and its overview) across refreshes
@@ -215,9 +220,55 @@ public class ProfileTabController {
         UiUtils.attachClickAnimation(addFundsBtn, state);
         UiUtils.attachClickAnimation(withdrawFundsBtn, state);
 
-        // TODO: no deposit/withdraw endpoint on the server yet; enable once ClientUtil has one
+        addFundsBtn.setOnAction(e ->
+                FundsDialog.askDeposit(currentBalance, state.getThemeStylesheets())
+                        .ifPresent(amount -> sendFundsRequest(true, amount)));
+
+        withdrawFundsBtn.setOnAction(e ->
+                FundsDialog.askWithdraw(currentBalance, state.getThemeStylesheets())
+                        .ifPresent(amount -> sendFundsRequest(false, amount)));
+    }
+
+    // sends the deposit/withdraw to the server, then shows the new balance or the server's error
+    private void sendFundsRequest(boolean isDeposit, double amount) {
+        String username = state.getActiveUser();
         addFundsBtn.setDisable(true);
         withdrawFundsBtn.setDisable(true);
+
+        Task<Double> fundsTask = new Task<>() {
+            @Override
+            protected Double call() throws Exception {
+                return isDeposit
+                        ? clientUtil.depositFunds(username, amount)
+                        : clientUtil.withdrawFunds(username, amount);
+            }
+        };
+
+        fundsTask.setOnSucceeded(e -> {
+            addFundsBtn.setDisable(false);
+            withdrawFundsBtn.setDisable(false);
+            currentBalance = fundsTask.getValue();
+            profileBalanceLabel.setText(String.format("$%.2f", currentBalance));
+            UiUtils.showAlert(Alert.AlertType.INFORMATION, isDeposit ? "Deposit" : "Withdrawal",
+                    String.format("%s $%.2f.%nNew balance: $%.2f",
+                            isDeposit ? "Deposited" : "Withdrew", amount, currentBalance),
+                    state.getThemeStylesheets());
+        });
+
+        fundsTask.setOnFailed(e -> {
+            addFundsBtn.setDisable(false);
+            withdrawFundsBtn.setDisable(false);
+            Throwable error = fundsTask.getException();
+            String message = error instanceof java.net.ConnectException
+                    ? "Can't reach the server. Is Tomcat running?"
+                    : error.getMessage();
+            UiUtils.showAlert(Alert.AlertType.ERROR, isDeposit ? "Deposit failed" : "Withdrawal failed",
+                    message, state.getThemeStylesheets());
+        });
+
+        Thread thread = new Thread(fundsTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void setupPortfolioTable() {

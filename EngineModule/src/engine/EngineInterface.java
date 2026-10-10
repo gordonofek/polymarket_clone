@@ -90,6 +90,18 @@ public interface EngineInterface {
      */
     public boolean addUser(String username);
 
+    /**
+     * adds money to the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user or an amount that isn't positive.
+     */
+    double depositFunds(String username, double amount);
+
+    /**
+     * takes money out of the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user, an amount that isn't positive, or more than the balance.
+     */
+    double withdrawFunds(String username, double amount);
+
     // saves the current state of the program to bin file
     void saveState(String filePath);
 

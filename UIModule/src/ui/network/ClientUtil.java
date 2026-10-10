@@ -2,6 +2,8 @@ package ui.network;
 
 import dto.*;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
@@ -277,6 +279,42 @@ public class ClientUtil {
 
         // 4. Parse the returned JSON back into a TradeReceiptDTO
         return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
+    }
+
+    // both return the new balance, or throw with the server's message (e.g. "Insufficient funds")
+    public double depositFunds(String username, double amount) throws Exception {
+        return changeFunds("deposit", username, amount);
+    }
+
+    public double withdrawFunds(String username, double amount) throws Exception {
+        return changeFunds("withdraw", username, amount);
+    }
+
+    private double changeFunds(String action, String username, double amount) throws Exception {
+        String formData = "action=" + action +
+                "&userName=" + encode(username) +
+                "&amount=" + amount;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/users"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(formData))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            String message;
+            try {
+                message = JsonParser.parseString(response.body()).getAsJsonObject().get("message").getAsString();
+            } catch (RuntimeException notOurJson) {
+                // e.g. a Tomcat error page instead of our JSON
+                message = "Server error: " + response.statusCode();
+            }
+            throw new Exception(message);
+        }
+        JsonObject body = JsonParser.parseString(response.body()).getAsJsonObject();
+        return body.get("balance").getAsDouble();
     }
 
     // makes a value safe to put in a URL or form body (spaces, &, = ...)

@@ -53,7 +53,7 @@
       <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
          <tabs>
             <!-- ==================== EVENTS TAB ==================== -->
-            <Tab text="Events">
+            <Tab fx:id="eventsTab" text="Events">
                <content>
                   <fx:include fx:id="eventsTabContent" source="events-tab.fxml" />
                </content>
