@@ -22,19 +22,20 @@ public class LoginServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
+        if (username == null || username.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400
+            response.getWriter().write("{\"success\": false, \"message\": \"Username can't be empty\"}");
+            return;
+        }
+
+        // a new name creates the user; an existing name logs back in as that user
         boolean didAdd = engine.addUser(username);
 
-        if(didAdd)
-        {
-            // הוספת המשתמש למנוע
-            response.setStatus(HttpServletResponse.SC_OK); // 200 OK
-            response.getWriter().write("{\"success\": true, \"message\": \"Logged in successfully\"}");
-        }
-        else
-        {
-            // החזרת שגיאה - המשתמש כבר קיים
-            response.setStatus(HttpServletResponse.SC_CONFLICT); // 409 Conflict
-            response.getWriter().write("{\"success\": false, \"message\": \"Username already exists\"}");
+        response.setStatus(HttpServletResponse.SC_OK); // 200 OK
+        if (didAdd) {
+            response.getWriter().write("{\"success\": true, \"message\": \"User created and logged in\"}");
+        } else {
+            response.getWriter().write("{\"success\": true, \"message\": \"Welcome back\"}");
         }
     }
 }

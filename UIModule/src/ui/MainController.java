@@ -11,10 +11,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.List;
 
 /**
@@ -99,30 +95,14 @@ public class MainController {
             filePathField.setText("Uploading to server...");
             progressBar.setVisible(true);
 
-            // אנחנו יוצרים Task כדי שבקשת הרשת לא תתקע את המסך הגרפי
-            Task<Boolean> uploadTask = new Task<>() {
+            // the upload runs in the background so the window doesn't freeze
+            // the logged in user becomes the market maker of the uploaded events
+            String uploader = state.getActiveUser();
+            Task<Void> uploadTask = new Task<>() {
                 @Override
-                protected Boolean call() throws Exception {
-                    // 1. יצירת לקוח HTTP
-                    HttpClient client = HttpClient.newHttpClient();
-
-                    // 2. בניית הבקשה. שים לב שאנחנו שמים את הקובץ ישירות ב-Body!
-                    HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:8080/FileUpload")) // ודא שזו הכתובת הנכונה
-                            .header("Content-Type", "application/xml") // השרת ידע שזה XML
-                            .POST(HttpRequest.BodyPublishers.ofFile(selectedFile.toPath()))
-                            .build();
-
-                    // 3. שליחת הבקשה והמתנה לתשובה מהשרת
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                    // 4. בדיקה האם השרת החזיר קוד 200 (הצלחה) או שגיאה
-                    if (response.statusCode() == 200) {
-                        return true;
-                    } else {
-                        // אם יש שגיאה (למשל כפילות בשם או XML לא תקין), נזרוק את הודעת השגיאה שהשרת החזיר
-                        throw new Exception(response.body());
-                    }
+                protected Void call() throws Exception {
+                    state.getClientUtil().uploadFile(selectedFile, uploader);
+                    return null;
                 }
             };
 

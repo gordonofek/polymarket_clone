@@ -10,5 +10,5 @@ public record EventSummaryDTO(
         String commissionType,
         List<String> options,
         String tradingMethodType,
-        String marketMaker // null until someone starts the event
+        String marketMaker // the user who uploaded the event's XML file
 ) {}

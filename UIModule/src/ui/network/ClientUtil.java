@@ -25,10 +25,13 @@ public class ClientUtil {
         this.gson = new Gson();
     }
 
-    public void uploadFile(File xmlFile) throws Exception
+    // the uploader becomes the market maker of every event in the file
+    public void uploadFile(File xmlFile, String username) throws Exception
     {
+        String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/FileUpload"))
+                .uri(URI.create(BASE_URL + "/FileUpload?userName=" + encodedUsername))
                 .header("Content-Type", "application/xml")
                 .POST(HttpRequest.BodyPublishers.ofFile(xmlFile.toPath()))
                 .build();
@@ -93,8 +96,7 @@ public class ClientUtil {
 
     public List<ParticipantHoldingDTO> getEventParticipants(String eventName) throws Exception {
         // 1. Build the URL with the eventName AND the action parameter
-        // Make sure to match your actual server base URL and port!
-        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName + "&action=participants";
+        String url = BASE_URL + "/events?eventName=" + encode(eventName) + "&action=participants";
 
         // 2. Build the request
         HttpRequest request = HttpRequest.newBuilder()
@@ -115,10 +117,10 @@ public class ClientUtil {
     }
 
     public TradeReceiptDTO startEvent(String username, String eventName) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format the parameters just like a web form submission
-        String formData = "action=startEvent&eventName=" + eventName + "&username=" + username;
+        String formData = "action=startEvent&eventName=" + encode(eventName) + "&username=" + encode(username);
 
         // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -139,10 +141,10 @@ public class ClientUtil {
     }
 
     public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format the parameters for the POST body
-        String formData = "action=closeEvent&eventName=" + eventName + "&winningOption=" + winningOption;
+        String formData = "action=closeEvent&eventName=" + encode(eventName) + "&winningOption=" + encode(winningOption);
 
         // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -220,8 +222,8 @@ public class ClientUtil {
 
     public boolean isUserMarketMaker(String username, String eventName) throws Exception {
         // 1. Build the URL with both eventName and username parameters
-        String url = "http://localhost:8080/polymarket/events?eventName=" + eventName
-                + "&action=isMarketMaker&username=" + username;
+        String url = BASE_URL + "/events?eventName=" + encode(eventName)
+                + "&action=isMarketMaker&username=" + encode(username);
 
         // 2. Build the GET request
         HttpRequest request = HttpRequest.newBuilder()
@@ -247,13 +249,13 @@ public class ClientUtil {
      * as an application/x-www-form-urlencoded string (like a standard HTML form submission), NOT as a JSON body.
      */
     public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format all parameters into a single form data string
         String formData = "action=placeOrder" +
-                "&username=" + username +
-                "&eventName=" + eventName +
-                "&optionName=" + optionName +
+                "&username=" + encode(username) +
+                "&eventName=" + encode(eventName) +
+                "&optionName=" + encode(optionName) +
                 "&amount=" + amount +
                 "&actionType=" + action.name() +
                 "&limitPrice=" + limitPrice;
@@ -275,5 +277,10 @@ public class ClientUtil {
 
         // 4. Parse the returned JSON back into a TradeReceiptDTO
         return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
+    }
+
+    // makes a value safe to put in a URL or form body (spaces, &, = ...)
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

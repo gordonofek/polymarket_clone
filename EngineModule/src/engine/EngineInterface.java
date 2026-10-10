@@ -13,9 +13,10 @@ public interface EngineInterface {
     // ==========================================
 
     /**
-     * טוען נתונים מקובץ XML ומרסט את המערכת.
+     * Loads the events from an XML file and adds them to the existing ones.
+     * The uploader becomes the market maker of every loaded event.
      */
-    void loadDataFromXML(InputStream fileContent) throws Exception;
+    void loadDataFromXML(InputStream fileContent, String uploader) throws Exception;
 
     /**
      * מחזיר true אם נטענו נתונים בהצלחה והמערכת מוכנה לעבודה.

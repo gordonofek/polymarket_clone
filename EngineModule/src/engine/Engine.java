@@ -23,11 +23,22 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public void loadDataFromXML(InputStream fileContent) throws Exception {
+    public void loadDataFromXML(InputStream fileContent, String uploader) throws Exception {
         lock.writeLock().lock();
         try {
+            User marketMaker = userManager.getUser(uploader);
+            if (marketMaker == null) {
+                throw new IllegalArgumentException("Unknown user '" + uploader + "'. Only logged in users can upload files.");
+            }
+
             Set<String> names = eventManager.getAllEventNames();
             List<Event> events = XMLDataLoader.loadData(fileContent, names);
+
+            // the uploader manages every event in the file (only they can start and close them)
+            for (Event event : events) {
+                event.setMarketMaker(uploader);
+                marketMaker.addManagedEvent(event.getName());
+            }
             eventManager.addEventList(events);
         } finally {
             lock.writeLock().unlock();
