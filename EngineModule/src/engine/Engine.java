@@ -6,6 +6,7 @@ import engine.files.FileHandler;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -179,6 +180,28 @@ public class Engine implements EngineInterface {
         }
     }
 
+    public EventsDeltaDTO getEventsDelta(int clientVersion) {
+        lock.readLock().lock();
+        try {
+            // שולפים רק אירועים שהשתנו, וממירים אותם ל-DTO
+            List<EventSummaryDTO> updatedEvents = eventManager.getEventsSinceVersion(clientVersion).stream()
+                    .map(event -> new EventSummaryDTO(
+                            event.getName(),
+                            event.getDescription(),
+                            event.getStatus().name(),
+                            event.getCommissionPercent(),
+                            event.getCommissionType().name(),
+                            event.getOptions(),
+                            event.getEventTradingMethodType().name()
+                    )).toList();
+
+            // אורזים יחד עם השעון העדכני
+            return new EventsDeltaDTO(eventManager.getGlobalVersion(), updatedEvents);
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+
     @Override
     public List<ParticipantHoldingDTO> getEventParticipants(String eventName) {
         lock.readLock().lock();
@@ -215,6 +238,8 @@ public class Engine implements EngineInterface {
             // 1. Capture the LIST of results
             List<TradeResult> results = event.processTrade(new TradeRequest(action, optionName, amount, limitPrice, username));
 
+            event.setVersion(eventManager.incrementAndGetGlobalVersion());
+
             double totalCostForInitiator = 0.0;
             double totalCommissionForInitiator = 0.0;
             boolean overallSuccess = false;
@@ -242,7 +267,8 @@ public class Engine implements EngineInterface {
                 User involvedUser = userManager.getUser(res.username());
 
                 // 4. Apply the financial changes AND update the Portfolio tracking maps
-                if (involvedUser != null) {
+                if (involvedUser != null)
+                {
                     if (res.action() == ActionType.BUY) {
                         involvedUser.deductFunds(res.totalCost());
                         involvedUser.addShares(eventName, res.optionName(), res.sharesProcessed());

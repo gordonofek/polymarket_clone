@@ -19,6 +19,11 @@ import ui.network.ClientUtil;
 public class AppState {
 
     private ClientUtil clientUtil = new ClientUtil();
+    private int localVersion = 0; // מתחיל מ-0 כדי להביא הכל בפעם הראשונה
+
+    public int getLocalVersion() { return localVersion; }
+    public void setLocalVersion(int localVersion) { this.localVersion = localVersion; }
+
 
     // the user we are trading as (null = no user selected)
     private final ObjectProperty<String> activeUser = new SimpleObjectProperty<>(null);

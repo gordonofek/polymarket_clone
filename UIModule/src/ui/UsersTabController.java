@@ -59,9 +59,9 @@ public class UsersTabController {
         setupUsersTable();
         setupPortfolioTable();
 
-        autoRefresher = new Timeline(new KeyFrame(Duration.seconds(2), e -> refresh()));
-        autoRefresher.setCycleCount(Timeline.INDEFINITE);
-        autoRefresher.play();
+//        autoRefresher = new Timeline(new KeyFrame(Duration.seconds(2), e -> refresh()));
+//        autoRefresher.setCycleCount(Timeline.INDEFINITE);
+//        autoRefresher.play();
     }
 
     // reloads the users list from the engine and refresh the active user
@@ -262,7 +262,8 @@ public class UsersTabController {
         });
     }
 
-    private void setupPortfolioTable() {
+    private void setupPortfolioTable()
+    {
         portfolioEventCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().eventName()));
         portfolioOptionCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().optionName()));
         portfolioSharesCol.setCellValueFactory(cellData -> new SimpleIntegerProperty(cellData.getValue().shares()));
