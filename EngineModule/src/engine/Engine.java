@@ -250,6 +250,24 @@ public class Engine implements EngineInterface {
                 return new TradeReceiptDTO(false, "User is blocked due to negative balance.", 0, 0);
             }
 
+            // a seller can only offer shares they own and haven't already offered in another waiting sell order
+            if (action == ActionType.SELL && event.getStatus() == EventStatus.OPEN
+                    && event.getTradingMethod() instanceof OrderBookTradingMethod ob
+                    && event.getOptions().contains(optionName)) {
+                int owned = initiatingUser.getPortfolio()
+                        .getOrDefault(eventName, Map.of())
+                        .getOrDefault(optionName, 0);
+                int alreadyOffered = ob.getPendingSellAmount(username, optionName);
+                int available = owned - alreadyOffered;
+                if (amount > available) {
+                    String message = alreadyOffered > 0
+                            ? String.format("You can sell at most %d '%s' shares (you own %d, %d are already in your waiting sell orders).",
+                                    Math.max(available, 0), optionName, owned, alreadyOffered)
+                            : String.format("You can sell at most %d '%s' shares (that's how many you own).", owned, optionName);
+                    return new TradeReceiptDTO(false, message, 0, 0);
+                }
+            }
+
             // 1. Capture the LIST of results
             List<TradeResult> results = event.processTrade(new TradeRequest(action, optionName, amount, limitPrice, username));
 
@@ -332,6 +350,11 @@ public class Engine implements EngineInterface {
             Event event = eventManager.getEvent(eventName);
             User user = userManager.getUser(username);
 
+            String notAllowed = checkMarketMaker(user, event, "start");
+            if (notAllowed != null) {
+                return new TradeReceiptDTO(false, notAllowed, 0, 0);
+            }
+
             if (event.getStatus() != EventStatus.NOT_STARTED) {
                 return new TradeReceiptDTO(false, "Event is already active.",0,0);
             }
@@ -370,11 +393,16 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) {
+    public CloseEventReceiptDTO closeEvent(String username, String eventName, String winningOption) {
         lock.writeLock().lock();
         try {
             // fetch the event
             Event event = eventManager.getEvent(eventName);
+
+            String notAllowed = checkMarketMaker(userManager.getUser(username), event, "close");
+            if (notAllowed != null) {
+                return new CloseEventReceiptDTO(false, notAllowed, null, 0, 0, 0);
+            }
 
             // close the event and get the results
             CloseMarketResult res = event.resolveEvent(winningOption);
@@ -399,11 +427,11 @@ public class Engine implements EngineInterface {
             // loop through the event ledger to find who holds the winning option
             Map<String, Map<String, Integer>> ledger = event.getParticipantsHoldings();
             for (Map.Entry<String, Map<String, Integer>> entry : ledger.entrySet()) {
-                String username = entry.getKey();
+                String holderName = entry.getKey();
                 int userWinningShares = entry.getValue().getOrDefault(winningOption, 0);
 
                 if (userWinningShares > 0) {
-                    User winner = userManager.getUser(username);
+                    User winner = userManager.getUser(holderName);
                     if (winner != null) {
                         double userPayout = userWinningShares * payoutPerShare;
                         double userCommission = userWinningShares * commissionPerShare;
@@ -540,6 +568,17 @@ public class Engine implements EngineInterface {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    // only the user who uploaded an event (its market maker) may start or close it; returns the reason if not, else null
+    private static String checkMarketMaker(User user, Event event, String verb) {
+        if (event == null) {
+            return "Unknown event.";
+        }
+        if (user == null || !user.getName().equals(event.getMarketMaker())) {
+            return "Only the event's market maker (" + event.getMarketMaker() + ") can " + verb + " it.";
+        }
+        return null;
     }
 
     private User getExistingUser(String username) {

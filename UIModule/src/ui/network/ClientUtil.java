@@ -171,11 +171,12 @@ public class ClientUtil {
         return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
     }
 
-    public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) throws Exception {
+    public CloseEventReceiptDTO closeEvent(String username, String eventName, String winningOption) throws Exception {
         String url = BASE_URL + "/events";
 
         // 1. Format the parameters for the POST body
-        String formData = "action=closeEvent&eventName=" + encode(eventName) + "&winningOption=" + encode(winningOption);
+        String formData = "action=closeEvent&eventName=" + encode(eventName) + "&winningOption=" + encode(winningOption)
+                + "&username=" + encode(username);
 
         // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()

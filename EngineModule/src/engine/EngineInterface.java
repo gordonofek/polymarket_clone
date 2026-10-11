@@ -77,8 +77,9 @@ public interface EngineInterface {
 
     /**
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).
+     * only the event's market maker may close it.
      */
-    CloseEventReceiptDTO closeEvent(String eventName, String winningOption);
+    CloseEventReceiptDTO closeEvent(String username, String eventName, String winningOption);
 
     /**
      * opens the event. checks the cost, market maker's balance, deducts the money and distributes the starting shares for Order Book events.

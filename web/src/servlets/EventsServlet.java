@@ -85,9 +85,10 @@ public class EventsServlet extends HttpServlet
             // 1. Extract parameters for closing
             String eventName = request.getParameter("eventName");
             String winningOption = request.getParameter("winningOption");
+            String username = request.getParameter("username");
 
             // 2. Execute the engine command
-            CloseEventReceiptDTO receipt = engine.closeEvent(eventName, winningOption);
+            CloseEventReceiptDTO receipt = engine.closeEvent(username, eventName, winningOption);
 
             // 3. Return the receipt as JSON
             response.getWriter().write(new Gson().toJson(receipt));

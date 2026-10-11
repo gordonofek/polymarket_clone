@@ -591,7 +591,7 @@ public class EventsTabController {
                 Task<CloseEventReceiptDTO> closeTask = new Task<>() {
                     @Override
                     protected CloseEventReceiptDTO call() throws Exception {
-                        return clientUtil.closeEvent(selectedEvent.name(), winningOption);
+                        return clientUtil.closeEvent(state.getActiveUser(), selectedEvent.name(), winningOption);
                     }
                 };
 
@@ -665,7 +665,7 @@ public class EventsTabController {
 
     private void showTradeDialog(EventSummaryDTO event, String optionName, ActionType action, boolean isOrderBook) {
         if (state.getActiveUser() == null) {
-            showAlert(Alert.AlertType.WARNING, "No User Selected", "Please go to the Users tab and select a user to trade.");
+            showAlert(Alert.AlertType.WARNING, "Not Logged In", "Please log in to trade.");
             return;
         }
 
@@ -812,7 +812,7 @@ public class EventsTabController {
      */
 
     private void setupEventListeners() {
-        // the active user is picked in the Users tab; update the Events tab to match
+        // the active user is set on login; update the Events tab to match
         state.activeUserProperty().addListener((obs, oldUser, newUser) -> {
             if (newUser == null) {
                 userNameLabelEvents.setText("Select a user...");

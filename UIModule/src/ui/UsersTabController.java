@@ -31,6 +31,7 @@ public class UsersTabController {
 
     // top banner
     @FXML private Label userNameLabel;
+    @FXML private Label userBalanceLabel;
 
     // market maker events table
     @FXML private TableView<EventSummaryDTO> mmEventsTableView;
@@ -90,7 +91,7 @@ public class UsersTabController {
                 for (UserSummaryDTO user : result.users()) {
                     if (user.name().equals(userToShow)) {
                         usersTableView.getSelectionModel().select(user);
-                        showUser(user.name());
+                        showUser(user);
                         break;
                     }
                 }
@@ -112,14 +113,16 @@ public class UsersTabController {
         allEvents = List.of();
         usersTableView.getSelectionModel().clearSelection();
         userNameLabel.setText("Select a user...");
+        userBalanceLabel.setText("$0.00");
         mmEventsTableView.getItems().clear();
     }
 
-    // fills the banner and the events this user is market maker of
-    private void showUser(String username) {
-        userNameLabel.setText(username);
+    // fills the banner (name and balance) and the events this user is market maker of
+    private void showUser(UserSummaryDTO user) {
+        userNameLabel.setText(user.name());
+        userBalanceLabel.setText(String.format("$%.2f", user.balance()));
         mmEventsTableView.getItems().setAll(allEvents.stream()
-                .filter(event -> username.equals(event.marketMaker()))
+                .filter(event -> user.name().equals(event.marketMaker()))
                 .toList());
     }
 
@@ -150,7 +153,7 @@ public class UsersTabController {
             // only a click on a different user changes the view (refresh() re-selects the same one)
             if (newSelection != null && !newSelection.name().equals(viewedUser)) {
                 viewedUser = newSelection.name();
-                showUser(newSelection.name());
+                showUser(newSelection);
             }
         });
     }
