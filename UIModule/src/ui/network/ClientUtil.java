@@ -110,7 +110,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to fetch event participants: server error " + response.statusCode());
         }
 
         // 4. Parse the JSON array back into a List of ParticipantHoldingDTOs
@@ -135,7 +135,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to start event: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into the TradeReceiptDTO
@@ -159,7 +159,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to close event: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into a CloseEventReceiptDTO
@@ -179,13 +179,13 @@ public class ClientUtil {
             Type listType = new TypeToken<List<UserSummaryDTO>>(){}.getType();
             return gson.fromJson(response.body(), listType);
         } else {
-            throw new Exception("Failed to fetch events: " + response.body());
+            throw new Exception("Failed to fetch users: " + response.body());
         }
     }
 
     public UserDetailsDTO getUserDetails(String username) throws Exception
     {
-        // Encode the event name to handle spaces (e.g., "World Cap Winner" -> "World%20Cap%20Winner")
+        // Encode the user name to handle spaces (e.g., "John Smith" -> "John+Smith")
         String encodedName = URLEncoder.encode(username, StandardCharsets.UTF_8);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -198,7 +198,7 @@ public class ClientUtil {
         if (response.statusCode() == 200) {
             return gson.fromJson(response.body(), UserDetailsDTO.class);
         } else {
-            throw new Exception("Failed to fetch event details: " + response.body());
+            throw new Exception("Failed to fetch user details: " + response.body());
         }
     }
 
@@ -218,7 +218,7 @@ public class ClientUtil {
         if (response.statusCode() == 200) {
             return gson.fromJson(response.body(), UserEventOverviewDTO.class);
         } else {
-            throw new Exception("Failed to fetch event details: " + response.body());
+            throw new Exception("Failed to fetch user event overview: " + response.body());
         }
     }
 
@@ -237,7 +237,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to check market maker: server error " + response.statusCode());
         }
 
         // 4. Parse the JSON response back into a boolean
@@ -274,7 +274,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to place order: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into a TradeReceiptDTO
