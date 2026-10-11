@@ -43,7 +43,14 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new Exception("Upload failed: " + response.body());
+            String message;
+            try {
+                message = JsonParser.parseString(response.body()).getAsJsonObject().get("message").getAsString();
+            } catch (RuntimeException notOurJson) {
+                // e.g. a Tomcat error page instead of our JSON
+                message = "Server error: " + response.statusCode();
+            }
+            throw new Exception(message);
         }
     }
 

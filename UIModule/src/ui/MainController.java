@@ -138,7 +138,7 @@ public class MainController {
                 loadFileBtn.setDisable(false);
                 filePathField.setText("Upload failed");
 
-                // כאן תוכל להקפיץ Alert של שגיאה עם הטקסט: uploadTask.getException().getMessage()
+                UiUtils.showAlert(Alert.AlertType.ERROR, "Upload Failed", uploadTask.getException().getMessage(), state.getThemeStylesheets());
             });
 
             // הפעלת ה-Task בת'רד נפרד

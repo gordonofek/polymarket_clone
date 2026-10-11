@@ -4,11 +4,13 @@ import engine.xml.GMEvent;
 import engine.xml.GuessMarket;
 import internals.*;
 import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.UnmarshalException;
 import jakarta.xml.bind.Unmarshaller;
 
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.sax.SAXSource;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXParseException;
 import org.xml.sax.XMLReader;
 import java.io.FileReader;
 
@@ -49,9 +51,17 @@ public static GuessMarket loadGuessMarket (InputStream fileContent) throws Excep
     SAXSource source = new SAXSource(xmlReader, new InputSource(fileContent));
 
     // Unmarshal GuessMarket based on xmlReader parser
-    GuessMarket guessMarket = (GuessMarket) unmarshaller.unmarshal(source);
-
-    return guessMarket;
+    try {
+        return (GuessMarket) unmarshaller.unmarshal(source);
+    } catch (UnmarshalException e) {
+        // JAXB leaves its own message null, the real reason is in the linked parser exception
+        Throwable reason = e.getLinkedException() != null ? e.getLinkedException() : e;
+        if (reason instanceof SAXParseException parseError) {
+            throw new InvalidXMLException("The file is not valid XML (line " + parseError.getLineNumber()
+                    + ", column " + parseError.getColumnNumber() + "): " + parseError.getMessage());
+        }
+        throw new InvalidXMLException("The file is not valid XML: " + reason.getMessage());
+    }
 }
 
 private static List<Event> parseEvents(GuessMarket guessMarket, Set<String> existingSystemEvents) throws InvalidXMLException{

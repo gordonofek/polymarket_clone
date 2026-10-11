@@ -19,6 +19,9 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import ui.network.ClientUtil;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -34,11 +37,13 @@ public class ProfileTabController {
     @FXML private Button addFundsBtn;
     @FXML private Button withdrawFundsBtn;
 
-    // balance history (no server data for it yet)
-    @FXML private TableView<Object> balanceTableView;
-    @FXML private TableColumn<Object, String> historyActionCol;
-    @FXML private TableColumn<Object, String> historyAmountCol;
-    @FXML private TableColumn<Object, String> historyDetailsCol;
+    // balance history (deposits and withdrawals, newest first)
+    @FXML private TableView<BalanceHistoryItemDTO> balanceTableView;
+    @FXML private TableColumn<BalanceHistoryItemDTO, String> historyActionCol;
+    @FXML private TableColumn<BalanceHistoryItemDTO, String> historyAmountCol;
+    @FXML private TableColumn<BalanceHistoryItemDTO, String> historyDetailsCol;
+
+    private static final DateTimeFormatter HISTORY_TIME_FORMAT = DateTimeFormatter.ofPattern("dd/MM HH:mm:ss");
 
     // portfolio table
     @FXML private TableView<PortfolioItemDTO> portfolioTableView;
@@ -69,7 +74,7 @@ public class ProfileTabController {
 
         setupPortfolioTable();
         setupFundsButtons();
-        balanceTableView.setPlaceholder(new Label("No balance history yet."));
+        setupBalanceHistoryTable();
 
         autoRefresher = new Timeline(new KeyFrame(Duration.seconds(2), e -> refresh()));
         autoRefresher.setCycleCount(Timeline.INDEFINITE);
@@ -99,6 +104,7 @@ public class ProfileTabController {
             profileUsernameLabel.setText(details.name());
             currentBalance = details.balance();
             profileBalanceLabel.setText(String.format("$%.2f", details.balance()));
+            balanceTableView.getItems().setAll(details.balanceHistory());
 
             // keep the selected row (and its overview) across refreshes
             portfolioTableView.getItems().setAll(details.portfolio());
@@ -249,6 +255,8 @@ public class ProfileTabController {
             withdrawFundsBtn.setDisable(false);
             currentBalance = fundsTask.getValue();
             profileBalanceLabel.setText(String.format("$%.2f", currentBalance));
+            // brings the new row into the balance history right away
+            refresh();
             UiUtils.showAlert(Alert.AlertType.INFORMATION, isDeposit ? "Deposit" : "Withdrawal",
                     String.format("%s $%.2f.%nNew balance: $%.2f",
                             isDeposit ? "Deposited" : "Withdrew", amount, currentBalance),
@@ -269,6 +277,24 @@ public class ProfileTabController {
         Thread thread = new Thread(fundsTask);
         thread.setDaemon(true);
         thread.start();
+    }
+
+    private void setupBalanceHistoryTable() {
+        historyActionCol.setCellValueFactory(cellData ->
+                new SimpleStringProperty(cellData.getValue().action().equals("DEPOSIT") ? "Deposit" : "Withdraw"));
+        historyAmountCol.setCellValueFactory(cellData -> {
+            BalanceHistoryItemDTO item = cellData.getValue();
+            String sign = item.action().equals("DEPOSIT") ? "+" : "-";
+            return new SimpleStringProperty(String.format("%s$%.2f", sign, item.amount()));
+        });
+        historyDetailsCol.setCellValueFactory(cellData -> {
+            BalanceHistoryItemDTO item = cellData.getValue();
+            String time = Instant.ofEpochMilli(item.timestamp()).atZone(ZoneId.systemDefault()).format(HISTORY_TIME_FORMAT);
+            return new SimpleStringProperty(String.format("Balance: $%.2f  ·  %s", item.balanceAfter(), time));
+        });
+
+        balanceTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
+        balanceTableView.setPlaceholder(new Label("No balance history yet."));
     }
 
     private void setupPortfolioTable() {

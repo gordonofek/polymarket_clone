@@ -1,5 +1,6 @@
 package servlets;
 
+import com.google.gson.JsonObject;
 import engine.Engine;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -39,8 +40,12 @@ public class FileUploadServlet extends HttpServlet {
             response.getWriter().write("{\"success\": true, \"message\": \"File loaded successfully\"}");
 
         } catch (Exception e) {
+            // Gson escapes quotes/newlines in the message (XML parser errors often have them)
+            JsonObject body = new JsonObject();
+            body.addProperty("success", false);
+            body.addProperty("message", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+            response.getWriter().write(body.toString());
         }
     }
 }

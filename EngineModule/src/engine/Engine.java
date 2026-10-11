@@ -483,7 +483,16 @@ public class Engine implements EngineInterface {
                     }
                 }
             }
-            return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio);
+            // newest first, so the latest deposit/withdrawal is at the top of the table
+            List<BalanceHistoryItemDTO> balanceHistory = user.getBalanceHistory().reversed().stream()
+                    .map(change -> new BalanceHistoryItemDTO(
+                            change.isDeposit() ? "DEPOSIT" : "WITHDRAW",
+                            change.amount(),
+                            change.balanceAfter(),
+                            change.timestamp()
+                    )).toList();
+
+            return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio, balanceHistory);
         } finally {
             lock.readLock().unlock();
         }
@@ -504,7 +513,9 @@ public class Engine implements EngineInterface {
         try {
             User user = getExistingUser(username);
             // addFunds also unblocks a user whose balance gets back to 0 or more
-            user.addFunds(toValidAmount(amount));
+            double cents = toValidAmount(amount);
+            user.addFunds(cents);
+            user.addBalanceChange(true, cents);
             return user.getBalance();
         } finally {
             lock.writeLock().unlock();
@@ -522,7 +533,9 @@ public class Engine implements EngineInterface {
                 throw new IllegalArgumentException(String.format(
                         "Insufficient funds: you have $%.2f.", user.getBalance()));
             }
-            user.deductFunds(Math.min(cents, user.getBalance()));
+            double withdrawn = Math.min(cents, user.getBalance());
+            user.deductFunds(withdrawn);
+            user.addBalanceChange(false, withdrawn);
             return user.getBalance();
         } finally {
             lock.writeLock().unlock();

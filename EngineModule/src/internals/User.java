@@ -1,7 +1,9 @@
 package internals;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,6 +27,9 @@ public class User {
 
     // Event name -> Total Payout received (used for profit/loss)
     private Map<String, Double> payoutsReceived = new HashMap<>();
+
+    // deposits and withdrawals, oldest first
+    private List<BalanceChange> balanceHistory = new ArrayList<>();
 
     public User(String name) {
         this.name = name;
@@ -109,5 +114,14 @@ public class User {
 
     public Map<String, Map<String, Double>> getOptionInvestments() {
         return this.optionInvestments;
+    }
+
+    // records a deposit/withdrawal; call after the balance was changed
+    public void addBalanceChange(boolean isDeposit, double amount) {
+        balanceHistory.add(new BalanceChange(isDeposit, amount, this.balance, System.currentTimeMillis()));
+    }
+
+    public List<BalanceChange> getBalanceHistory() {
+        return balanceHistory;
     }
 }
