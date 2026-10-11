@@ -176,6 +176,8 @@ public class MainController {
                         // מכיוון שכשהמחיר של אירוע משתנה, השווי שלו בפורטפוליו משתנה,
                         // ומכיוון שבינתיים אין לך Delta ליוזרים, נקרא פשוט לרענון היוזרים הקיים
                         usersTabContentController.refresh();
+                        // the portfolio moved to the Profile tab, so it needs the refresh too
+                        profileTabContentController.refresh();
                     },
                     // גם כאן, רק שם המשתנה error
                     error -> {

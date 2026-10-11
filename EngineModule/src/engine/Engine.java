@@ -206,7 +206,8 @@ public class Engine implements EngineInterface {
                             event.getCommissionPercent(),
                             event.getCommissionType().name(),
                             event.getOptions(),
-                            event.getEventTradingMethodType().name()
+                            event.getEventTradingMethodType().name(),
+                            event.getMarketMaker()
                     )).toList();
 
             // אורזים יחד עם השעון העדכני
@@ -353,6 +354,7 @@ public class Engine implements EngineInterface {
             // deducting funds and opening the event
             user.deductFunds(cost);
             event.openEvent();
+            event.setVersion(eventManager.incrementAndGetGlobalVersion());
 
             // granting the market maker the initial order book shares for EVERY option
             if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
@@ -376,6 +378,7 @@ public class Engine implements EngineInterface {
 
             // close the event and get the results
             CloseMarketResult res = event.resolveEvent(winningOption);
+            event.setVersion(eventManager.incrementAndGetGlobalVersion());
 
             // pay the market maker their commission + leftover subsidy
             String mmName = event.getMarketMaker();
