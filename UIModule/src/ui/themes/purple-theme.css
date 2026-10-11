@@ -264,7 +264,7 @@
     -fx-border-width: 2 1 0 1;
 }
 .tab-pane .tab:selected .tab-label { -fx-text-fill: #9333ea; }
-.tab-pane .tab:focus, .tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
+.tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
 
 /* ==================================
     TABLE VIEW STYLING
@@ -432,3 +432,32 @@
 .modern-dialog > .content.label { -fx-text-fill: #4c1d95; -fx-font-size: 14px; -fx-padding: 10px; }
 .modern-dialog .header-panel { -fx-background-color: #f3e8ff; }
 .modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #9333ea; }
+
+/* =========================================
+   PROFILE & USERS TAB
+   (kept after the split-pane patch above so it wins)
+========================================= */
+.transparent-split-pane { -fx-background-color: transparent; -fx-padding: 0; }
+.transparent-split-pane > .split-pane-divider { -fx-background-color: transparent; }
+
+.profile-info-box {
+    -fx-background-color: #faf5ff;
+    -fx-border-color: #e9d5ff;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 15;
+}
+
+.user-banner { -fx-background-color: #f3e8ff; -fx-border-color: #d8b4fe; }
+.user-banner .main-app-title { -fx-text-fill: #6b21a8; }
+
+/* chart colors for events with more than 3 options */
+.poly-chart .default-color3.chart-series-line { -fx-stroke: #ec4899; }
+.poly-chart .default-color3.chart-legend-item-symbol { -fx-background-color: #ec4899, transparent; }
+.poly-chart .default-color3.endpoint-marker { -fx-background-color: #ec4899; }
+.poly-chart .default-color4.chart-series-line { -fx-stroke: #6366f1; }
+.poly-chart .default-color4.chart-legend-item-symbol { -fx-background-color: #6366f1, transparent; }
+.poly-chart .default-color4.endpoint-marker { -fx-background-color: #6366f1; }
+.poly-chart .default-color5.chart-series-line { -fx-stroke: #14b8a6; }
+.poly-chart .default-color5.chart-legend-item-symbol { -fx-background-color: #14b8a6, transparent; }
+.poly-chart .default-color5.endpoint-marker { -fx-background-color: #14b8a6; }

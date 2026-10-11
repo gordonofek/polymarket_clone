@@ -1,6 +1,6 @@
 package ui;
 
-import engine.dto.*;
+import dto.*;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -14,10 +14,6 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.List;
 
 /**
@@ -36,7 +32,12 @@ public class MainController {
     @FXML private ProgressBar progressBar;
 
     // Tab
+    @FXML private Tab eventsTab;
     @FXML private Tab usersTab;
+    @FXML private Tab profileTab;
+
+    // Profile tab (profile-tab.fxml), injected from <fx:include fx:id="profileTabContent">
+    @FXML private ProfileTabController profileTabContentController;
 
     // Events tab (events-tab.fxml), injected from <fx:include fx:id="eventsTabContent">
     @FXML private EventsTabController eventsTabContentController;
@@ -60,6 +61,7 @@ public class MainController {
         // all tabs share the same state
         eventsTabContentController.init(state);
         usersTabContentController.init(state);
+        profileTabContentController.init(state);
         settingsTabContentController.init(state);
 
         if (usersTab != null) {
@@ -67,18 +69,27 @@ public class MainController {
                 if (isNowSelected) usersTabContentController.refresh();
             });
         }
+        // balance and prices may have changed in another tab (deposit/withdraw) or by other users
+        eventsTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) eventsTabContentController.updateEvents();
+        });
+        profileTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) profileTabContentController.refresh();
+        });
         startDeltaFetching();
     }
 
     public void loadData(List<EventSummaryDTO> events)
     {
         // clear the selected event and user so nothing points at the previously loaded file
+        // the logged in user stays the same, only the users tab view is cleared
         eventsTabContentController.reset();
-        state.setActiveUser(null);
         usersTabContentController.reset();
+        profileTabContentController.reset();
 
         eventsTabContentController.showEvents(events);
         usersTabContentController.refresh();
+        profileTabContentController.refresh();
     }
 
     @FXML
@@ -95,30 +106,14 @@ public class MainController {
             filePathField.setText("Uploading to server...");
             progressBar.setVisible(true);
 
-            // אנחנו יוצרים Task כדי שבקשת הרשת לא תתקע את המסך הגרפי
-            Task<Boolean> uploadTask = new Task<>() {
+            // the upload runs in the background so the window doesn't freeze
+            // the logged in user becomes the market maker of the uploaded events
+            String uploader = state.getActiveUser();
+            Task<Void> uploadTask = new Task<>() {
                 @Override
-                protected Boolean call() throws Exception {
-                    // 1. יצירת לקוח HTTP
-                    HttpClient client = HttpClient.newHttpClient();
-
-                    // 2. בניית הבקשה. שים לב שאנחנו שמים את הקובץ ישירות ב-Body!
-                    HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:8080/FileUpload")) // ודא שזו הכתובת הנכונה
-                            .header("Content-Type", "application/xml") // השרת ידע שזה XML
-                            .POST(HttpRequest.BodyPublishers.ofFile(selectedFile.toPath()))
-                            .build();
-
-                    // 3. שליחת הבקשה והמתנה לתשובה מהשרת
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                    // 4. בדיקה האם השרת החזיר קוד 200 (הצלחה) או שגיאה
-                    if (response.statusCode() == 200) {
-                        return true;
-                    } else {
-                        // אם יש שגיאה (למשל כפילות בשם או XML לא תקין), נזרוק את הודעת השגיאה שהשרת החזיר
-                        throw new Exception(response.body());
-                    }
+                protected Void call() throws Exception {
+                    state.getClientUtil().uploadFile(selectedFile, uploader);
+                    return null;
                 }
             };
 
@@ -134,6 +129,7 @@ public class MainController {
                 // Refresh the events tab with the new data from the server
                 eventsTabContentController.updateEvents();
                 usersTabContentController.refresh();
+                profileTabContentController.refresh();
             });
 
             // מה לעשות אם ההעלאה נכשלה
@@ -148,6 +144,14 @@ public class MainController {
             // הפעלת ה-Task בת'רד נפרד
             new Thread(uploadTask).start();
         }
+    }
+
+    public void setLoggedInUser(String username) {
+        state.setActiveUser(username);
+
+        // the server may already have events (uploaded by other users); the Events tab
+        // starts selected, so its tab listener won't fire, so load them here
+        eventsTabContentController.updateEvents();
     }
 
     public void startDeltaFetching() {

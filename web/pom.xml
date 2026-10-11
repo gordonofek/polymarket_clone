@@ -16,6 +16,10 @@
     <dependencies>
         <dependency>
             <groupId>polymarket</groupId>
+            <artifactId>dto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>polymarket</groupId>
             <artifactId>engine</artifactId>
         </dependency>
         <dependency>

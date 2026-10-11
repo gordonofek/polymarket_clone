@@ -1,7 +1,7 @@
 package ui;
 
-import engine.dto.TradeRecordDTO;
-import internals.ActionType;
+import dto.TradeRecordDTO;
+import dto.ActionType;
 import javafx.animation.Animation;
 import javafx.animation.ScaleTransition;
 import javafx.scene.Node;

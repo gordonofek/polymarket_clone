@@ -15,6 +15,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>polymarket</groupId>
+            <artifactId>dto</artifactId>
+        </dependency>
+        <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>

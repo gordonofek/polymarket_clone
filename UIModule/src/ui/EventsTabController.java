@@ -1,9 +1,7 @@
 package ui;
 
-import engine.EngineInterface;
-import engine.dto.*;
+import dto.*;
 
-import internals.ActionType;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;

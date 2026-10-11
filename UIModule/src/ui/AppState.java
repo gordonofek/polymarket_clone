@@ -1,9 +1,9 @@
 package ui;
 
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import ui.network.ClientUtil;
@@ -25,8 +25,8 @@ public class AppState {
     public void setLocalVersion(int localVersion) { this.localVersion = localVersion; }
 
 
-    // the user we are trading as (null = no user selected)
-    private final ObjectProperty<String> activeUser = new SimpleObjectProperty<>(null);
+    // the logged in user we are trading as; set once after login and never changes
+    private final ReadOnlyObjectWrapper<String> activeUser = new ReadOnlyObjectWrapper<>(null);
 
     // turned on/off from the settings tab, checked by every animation
     private final BooleanProperty animationsEnabled = new SimpleBooleanProperty(true);
@@ -45,11 +45,15 @@ public class AppState {
 
 
     public void setActiveUser(String username) {
+        if (activeUser.get() != null) {
+            throw new IllegalStateException("The active user is already set to " + activeUser.get());
+        }
         activeUser.set(username);
     }
 
-    public ObjectProperty<String> activeUserProperty() {
-        return activeUser;
+    // read only: other parts of the UI can listen to it but not change it
+    public ReadOnlyObjectProperty<String> activeUserProperty() {
+        return activeUser.getReadOnlyProperty();
     }
 
     public boolean isAnimationsEnabled() {

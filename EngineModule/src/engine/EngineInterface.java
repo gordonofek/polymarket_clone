@@ -1,11 +1,10 @@
 package engine;
 
-import engine.dto.*;
-import internals.ActionType;
+import dto.*;
+
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 
 public interface EngineInterface {
 
@@ -14,9 +13,10 @@ public interface EngineInterface {
     // ==========================================
 
     /**
-     * טוען נתונים מקובץ XML ומרסט את המערכת.
+     * Loads the events from an XML file and adds them to the existing ones.
+     * The uploader becomes the market maker of every loaded event.
      */
-    void loadDataFromXML(InputStream fileContent) throws Exception;
+    void loadDataFromXML(InputStream fileContent, String uploader) throws Exception;
 
     /**
      * מחזיר true אם נטענו נתונים בהצלחה והמערכת מוכנה לעבודה.
@@ -89,6 +89,18 @@ public interface EngineInterface {
      * adds a new user when we login to the server(from part 3)
      */
     public boolean addUser(String username);
+
+    /**
+     * adds money to the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user or an amount that isn't positive.
+     */
+    double depositFunds(String username, double amount);
+
+    /**
+     * takes money out of the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user, an amount that isn't positive, or more than the balance.
+     */
+    double withdrawFunds(String username, double amount);
 
     // saves the current state of the program to bin file
     void saveState(String filePath);

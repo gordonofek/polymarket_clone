@@ -1,5 +1,9 @@
 package ui.network;
+
+import dto.*;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import engine.dto.*;
 import internals.ActionType;
@@ -27,10 +31,13 @@ public class ClientUtil {
         this.gson = new Gson();
     }
 
-    public void uploadFile(File xmlFile) throws Exception
+    // the uploader becomes the market maker of every event in the file
+    public void uploadFile(File xmlFile, String username) throws Exception
     {
+        String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
+
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/FileUpload"))
+                .uri(URI.create(BASE_URL + "/FileUpload?userName=" + encodedUsername))
                 .header("Content-Type", "application/xml")
                 .POST(HttpRequest.BodyPublishers.ofFile(xmlFile.toPath()))
                 .build();
@@ -117,9 +124,8 @@ public class ClientUtil {
     }
 
     public List<ParticipantHoldingDTO> getEventParticipants(String eventName) throws Exception {
-        // עוטפים את ה-eventName ב-URLEncoder כדי למנוע שגיאות עם רווחים
-        String encodedEventName = URLEncoder.encode(eventName, StandardCharsets.UTF_8);
-        String url = BASE_URL + "/events?eventName=" + encodedEventName + "&action=participants";
+        // 1. Build the URL with the eventName AND the action parameter
+        String url = BASE_URL + "/events?eventName=" + encode(eventName) + "&action=participants";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -129,7 +135,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to fetch event participants: server error " + response.statusCode());
         }
 
         Type listType = new TypeToken<List<ParticipantHoldingDTO>>(){}.getType();
@@ -137,10 +143,10 @@ public class ClientUtil {
     }
 
     public TradeReceiptDTO startEvent(String username, String eventName) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format the parameters just like a web form submission
-        String formData = "action=startEvent&eventName=" + eventName + "&username=" + username;
+        String formData = "action=startEvent&eventName=" + encode(eventName) + "&username=" + encode(username);
 
         // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -153,7 +159,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to start event: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into the TradeReceiptDTO
@@ -161,10 +167,10 @@ public class ClientUtil {
     }
 
     public CloseEventReceiptDTO closeEvent(String eventName, String winningOption) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format the parameters for the POST body
-        String formData = "action=closeEvent&eventName=" + eventName + "&winningOption=" + winningOption;
+        String formData = "action=closeEvent&eventName=" + encode(eventName) + "&winningOption=" + encode(winningOption);
 
         // 2. Build the POST request
         HttpRequest request = HttpRequest.newBuilder()
@@ -177,7 +183,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to close event: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into a CloseEventReceiptDTO
@@ -197,13 +203,13 @@ public class ClientUtil {
             Type listType = new TypeToken<List<UserSummaryDTO>>(){}.getType();
             return gson.fromJson(response.body(), listType);
         } else {
-            throw new Exception("Failed to fetch events: " + response.body());
+            throw new Exception("Failed to fetch users: " + response.body());
         }
     }
 
     public UserDetailsDTO getUserDetails(String username) throws Exception
     {
-        // Encode the event name to handle spaces (e.g., "World Cap Winner" -> "World%20Cap%20Winner")
+        // Encode the user name to handle spaces (e.g., "John Smith" -> "John+Smith")
         String encodedName = URLEncoder.encode(username, StandardCharsets.UTF_8);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -216,7 +222,7 @@ public class ClientUtil {
         if (response.statusCode() == 200) {
             return gson.fromJson(response.body(), UserDetailsDTO.class);
         } else {
-            throw new Exception("Failed to fetch event details: " + response.body());
+            throw new Exception("Failed to fetch user details: " + response.body());
         }
     }
 
@@ -236,17 +242,14 @@ public class ClientUtil {
         if (response.statusCode() == 200) {
             return gson.fromJson(response.body(), UserEventOverviewDTO.class);
         } else {
-            throw new Exception("Failed to fetch event details: " + response.body());
+            throw new Exception("Failed to fetch user event overview: " + response.body());
         }
     }
 
     public boolean isUserMarketMaker(String username, String eventName) throws Exception {
-        // עוטפים גם את ה-username וגם את ה-eventName ב-URLEncoder
-        String encodedEventName = URLEncoder.encode(eventName, StandardCharsets.UTF_8);
-        String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
-
-        String url = BASE_URL + "/events?eventName=" + encodedEventName
-                + "&action=isMarketMaker&username=" + encodedUsername;
+        // 1. Build the URL with both eventName and username parameters
+        String url = BASE_URL + "/events?eventName=" + encode(eventName)
+                + "&action=isMarketMaker&username=" + encode(username);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -256,7 +259,7 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to check market maker: server error " + response.statusCode());
         }
 
         return gson.fromJson(response.body(), Boolean.class);
@@ -269,13 +272,13 @@ public class ClientUtil {
      * as an application/x-www-form-urlencoded string (like a standard HTML form submission), NOT as a JSON body.
      */
     public TradeReceiptDTO placeOrder(String username, String eventName, String optionName, int amount, ActionType action, double limitPrice) throws Exception {
-        String url = "http://localhost:8080/polymarket/events";
+        String url = BASE_URL + "/events";
 
         // 1. Format all parameters into a single form data string
         String formData = "action=placeOrder" +
-                "&username=" + username +
-                "&eventName=" + eventName +
-                "&optionName=" + optionName +
+                "&username=" + encode(username) +
+                "&eventName=" + encode(eventName) +
+                "&optionName=" + encode(optionName) +
                 "&amount=" + amount +
                 "&actionType=" + action.name() +
                 "&limitPrice=" + limitPrice;
@@ -292,10 +295,51 @@ public class ClientUtil {
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            throw new RuntimeException("Server error: " + response.statusCode());
+            throw new RuntimeException("Failed to place order: server error " + response.statusCode());
         }
 
         // 4. Parse the returned JSON back into a TradeReceiptDTO
         return new Gson().fromJson(response.body(), TradeReceiptDTO.class);
+    }
+
+    // both return the new balance, or throw with the server's message (e.g. "Insufficient funds")
+    public double depositFunds(String username, double amount) throws Exception {
+        return changeFunds("deposit", username, amount);
+    }
+
+    public double withdrawFunds(String username, double amount) throws Exception {
+        return changeFunds("withdraw", username, amount);
+    }
+
+    private double changeFunds(String action, String username, double amount) throws Exception {
+        String formData = "action=" + action +
+                "&userName=" + encode(username) +
+                "&amount=" + amount;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/users"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(formData))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() != 200) {
+            String message;
+            try {
+                message = JsonParser.parseString(response.body()).getAsJsonObject().get("message").getAsString();
+            } catch (RuntimeException notOurJson) {
+                // e.g. a Tomcat error page instead of our JSON
+                message = "Server error: " + response.statusCode();
+            }
+            throw new Exception(message);
+        }
+        JsonObject body = JsonParser.parseString(response.body()).getAsJsonObject();
+        return body.get("balance").getAsDouble();
+    }
+
+    // makes a value safe to put in a URL or form body (spaces, &, = ...)
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

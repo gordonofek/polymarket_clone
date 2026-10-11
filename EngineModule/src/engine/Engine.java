@@ -1,7 +1,8 @@
 package engine;
+
+import dto.*;
 import internals.*;
 
-import engine.dto.*;
 import engine.files.FileHandler;
 
 import java.io.InputStream;
@@ -23,11 +24,22 @@ public class Engine implements EngineInterface {
     }
 
     @Override
-    public void loadDataFromXML(InputStream fileContent) throws Exception {
+    public void loadDataFromXML(InputStream fileContent, String uploader) throws Exception {
         lock.writeLock().lock();
         try {
+            User marketMaker = userManager.getUser(uploader);
+            if (marketMaker == null) {
+                throw new IllegalArgumentException("Unknown user '" + uploader + "'. Only logged in users can upload files.");
+            }
+
             Set<String> names = eventManager.getAllEventNames();
             List<Event> events = XMLDataLoader.loadData(fileContent, names);
+
+            // the uploader manages every event in the file (only they can start and close them)
+            for (Event event : events) {
+                event.setMarketMaker(uploader);
+                marketMaker.addManagedEvent(event.getName());
+            }
             eventManager.addEventList(events);
         } finally {
             lock.writeLock().unlock();
@@ -58,7 +70,8 @@ public class Engine implements EngineInterface {
                             event.getCommissionPercent(),
                             event.getCommissionType().name(),
                             event.getOptions(),
-                            event.getEventTradingMethodType().name()
+                            event.getEventTradingMethodType().name(),
+                            event.getMarketMaker()
                     ))
                     .toList();
         } finally {
@@ -84,7 +97,8 @@ public class Engine implements EngineInterface {
                             event.getCommissionPercent(),
                             event.getCommissionType().name(),
                             event.getOptions(),
-                            event.getEventTradingMethodType().name()
+                            event.getEventTradingMethodType().name(),
+                            event.getMarketMaker()
                     );
                     list.add(dto);
                 }
@@ -479,6 +493,58 @@ public class Engine implements EngineInterface {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    @Override
+    public double depositFunds(String username, double amount) {
+        lock.writeLock().lock();
+        try {
+            User user = getExistingUser(username);
+            // addFunds also unblocks a user whose balance gets back to 0 or more
+            user.addFunds(toValidAmount(amount));
+            return user.getBalance();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public double withdrawFunds(String username, double amount) {
+        lock.writeLock().lock();
+        try {
+            User user = getExistingUser(username);
+            double cents = toValidAmount(amount);
+            // deductFunds allows going negative (for trades), a withdrawal must not
+            if (cents > roundToCents(user.getBalance())) {
+                throw new IllegalArgumentException(String.format(
+                        "Insufficient funds: you have $%.2f.", user.getBalance()));
+            }
+            user.deductFunds(Math.min(cents, user.getBalance()));
+            return user.getBalance();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    private User getExistingUser(String username) {
+        User user = userManager.getUser(username);
+        if (user == null) {
+            throw new IllegalArgumentException("Unknown user '" + username + "'.");
+        }
+        return user;
+    }
+
+    // money moves in whole cents; rejects NaN, infinity, zero and negative amounts
+    private static double toValidAmount(double amount) {
+        double cents = roundToCents(amount);
+        if (!Double.isFinite(amount) || cents <= 0) {
+            throw new IllegalArgumentException("The amount must be a positive number.");
+        }
+        return cents;
+    }
+
+    private static double roundToCents(double amount) {
+        return Math.round(amount * 100) / 100.0;
     }
 
     @Override

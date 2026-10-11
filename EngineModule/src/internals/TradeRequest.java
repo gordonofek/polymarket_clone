@@ -1,5 +1,7 @@
 package internals;
 
+import dto.ActionType;
+
 import java.util.UUID;
 
 public class TradeRequest {
