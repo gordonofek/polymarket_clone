@@ -2,6 +2,8 @@ package ui;
 
 import dto.*;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -9,6 +11,7 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.File;
 import java.util.List;
@@ -20,6 +23,8 @@ import java.util.List;
 public class MainController {
 
     private final AppState state = new AppState();
+    // הוסף משתנה ברמת המחלקה:
+    private Timeline deltaTimeline;
 
     // Top part
     @FXML private Button loadFileBtn;
@@ -71,6 +76,7 @@ public class MainController {
         profileTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
             if (isNowSelected) profileTabContentController.refresh();
         });
+        startDeltaFetching();
     }
 
     public void loadData(List<EventSummaryDTO> events)
@@ -148,4 +154,37 @@ public class MainController {
         eventsTabContentController.updateEvents();
     }
 
+    public void startDeltaFetching() {
+        deltaTimeline = new Timeline(new KeyFrame(Duration.seconds(2), event -> {
+
+            int currentVersion = state.getLocalVersion(); // מקבל את הגרסה מ-AppState
+
+            state.getClientUtil().fetchDeltaUpdates(currentVersion,
+                    // התיקון כאן: מורידים את המילה EventsDeltaDTO, וכותבים רק את שם המשתנה
+                    deltaDTO -> {
+                        // 1. השרת החזיר מידע! מעדכנים את הגרסה המקומית
+                        state.setLocalVersion(deltaDTO.serverVersion());
+
+
+                        System.out.println("CLIENT: Got Delta! New local version: " + state.getLocalVersion() + " | Events updated: " + deltaDTO.updatedEvents().size());
+                        // 2. מחלקים את העבודה לכרטיסיות:
+
+                        // א. עדכון טבלת האירועים המרכזית (רק מה שהשתנה!)
+                        eventsTabContentController.mergeUpdatedEvents(deltaDTO.updatedEvents());
+
+                        // ב. עדכון הפורטפוליו והיוזרים
+                        // מכיוון שכשהמחיר של אירוע משתנה, השווי שלו בפורטפוליו משתנה,
+                        // ומכיוון שבינתיים אין לך Delta ליוזרים, נקרא פשוט לרענון היוזרים הקיים
+                        usersTabContentController.refresh();
+                    },
+                    // גם כאן, רק שם המשתנה error
+                    error -> {
+                        System.err.println("Delta fetch failed: " + error);
+                    }
+            );
+        }));
+
+        deltaTimeline.setCycleCount(Timeline.INDEFINITE);
+        deltaTimeline.play();
+    }
 }

@@ -312,6 +312,39 @@ public class EventsTabController {
         thread.start();
     }
 
+    // פונקציה שמקבלת את הדלתא ומשלבת אותה אל תוך רשימת האירועים הכללית
+    public void mergeUpdatedEvents(List<EventSummaryDTO> updatedEvents) {
+        if (updatedEvents == null || updatedEvents.isEmpty()) return;
+
+        for (EventSummaryDTO updatedEvent : updatedEvents) {
+            boolean found = false;
+
+            // עוברים על רשימת כל האירועים הנוכחית כדי למצוא האם זה אירוע שצריך לעדכן
+            for (int i = 0; i < this.allEvents.size(); i++) {
+                if (this.allEvents.get(i).name().equals(updatedEvent.name())) {
+                    // האירוע נמצא! מחליפים אותו בעותק החדש שקיבלנו מהשרת
+                    this.allEvents.set(i, updatedEvent);
+                    found = true;
+
+                    // אם זה במקרה האירוע שהמשתמש מסתכל עליו עכשיו בחלון הפרטים, נרענן גם אותו
+                    if (this.selectedEvent != null && this.selectedEvent.name().equals(updatedEvent.name())) {
+                        this.selectedEvent = updatedEvent;
+                        handleTileClick(this.selectedEvent); // מעדכן את התצוגה המפורטת בצד שמאל
+                    }
+                    break;
+                }
+            }
+
+            // אם לא מצאנו, זה אומר שזה אירוע חדש (למשל ממישהו שהעלה XML)
+            if (!found) {
+                this.allEvents.add(updatedEvent);
+            }
+        }
+
+        // אחרי שסיימנו לעדכן את הרשימה מאחורי הקלעים, אנחנו מבקשים מה-UI לצייר את עצמו מחדש
+        updateEventList();
+    }
+
     // --- HELPER METHODS ---
 
     private void populateOptionsList(EventDetailsDTO historyDetails, EventSummaryDTO eventSummary, boolean isOrderBook) {

@@ -19,6 +19,11 @@ import ui.network.ClientUtil;
 public class AppState {
 
     private ClientUtil clientUtil = new ClientUtil();
+    private int localVersion = 0; // מתחיל מ-0 כדי להביא הכל בפעם הראשונה
+
+    public int getLocalVersion() { return localVersion; }
+    public void setLocalVersion(int localVersion) { this.localVersion = localVersion; }
+
 
     // the logged in user we are trading as; set once after login and never changes
     private final ReadOnlyObjectWrapper<String> activeUser = new ReadOnlyObjectWrapper<>(null);

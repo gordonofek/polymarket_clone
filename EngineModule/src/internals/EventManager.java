@@ -2,13 +2,34 @@ package internals;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class EventManager implements Serializable {
     private Map<String, Event> eventRegistry;
+    private AtomicInteger globalVersion = new AtomicInteger(0);
 
     public EventManager()
     {
         this.eventRegistry = new HashMap<>();
+    }
+
+    // פונקציה שעוברת על כל האירועים ומחזירה רק את אלו שהשתנו
+    public List<Event> getEventsSinceVersion(int clientVersion) {
+        List<Event> updatedEvents = new ArrayList<>();
+        for (Event event : eventRegistry.values()) {
+            if (event.getVersion() > clientVersion) {
+                updatedEvents.add(event);
+            }
+        }
+        return updatedEvents;
+    }
+
+    public int getGlobalVersion() {
+        return globalVersion.get();
+    }
+
+    public int incrementAndGetGlobalVersion() {
+        return this.globalVersion.incrementAndGet();
     }
 
     // adds an event to the registry
@@ -17,6 +38,8 @@ public class EventManager implements Serializable {
         {
             throw new IllegalArgumentException("Event with the id"+event.getName()+" already exists in the registry");
         }
+        event.setVersion(this.incrementAndGetGlobalVersion());
+
         this.eventRegistry.put(event.getName(),event);
     }
 

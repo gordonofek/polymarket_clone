@@ -5,6 +5,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
+import engine.dto.*;
+import internals.ActionType;
+import javafx.application.Platform;
 
 import java.io.File;
 import java.net.URI;
@@ -15,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class ClientUtil {
 
@@ -60,6 +64,29 @@ public class ClientUtil {
         }
     }
 
+    public void fetchDeltaUpdates(int currentVersion, Consumer<EventsDeltaDTO> onSuccess, Consumer<String> onError) {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/events?version=" + currentVersion))
+                .GET()
+                .build();
+
+        client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> {
+                    if (response.statusCode() == 200) {
+                        // המרה של ה-JSON לאובייקט
+                        EventsDeltaDTO delta = gson.fromJson(response.body(), EventsDeltaDTO.class);
+                        // חובה להריץ את העדכון על ה-JavaFX Application Thread
+                        Platform.runLater(() -> onSuccess.accept(delta));
+                    } else {
+                        Platform.runLater(() -> onError.accept("Failed to fetch updates"));
+                    }
+                })
+                .exceptionally(e -> {
+                    Platform.runLater(() -> onError.accept(e.getMessage()));
+                    return null;
+                });
+    }
+
     public List<EventSummaryDTO> getEventsSummary() throws Exception
     {
         HttpRequest request = HttpRequest.newBuilder()
@@ -100,22 +127,19 @@ public class ClientUtil {
         // 1. Build the URL with the eventName AND the action parameter
         String url = BASE_URL + "/events?eventName=" + encode(eventName) + "&action=participants";
 
-        // 2. Build the request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
                 .build();
 
-        // 3. Send the request and wait for the response
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new RuntimeException("Failed to fetch event participants: server error " + response.statusCode());
         }
 
-        // 4. Parse the JSON array back into a List of ParticipantHoldingDTOs
         Type listType = new TypeToken<List<ParticipantHoldingDTO>>(){}.getType();
-        return new Gson().fromJson(response.body(), listType);
+        return gson.fromJson(response.body(), listType);
     }
 
     public TradeReceiptDTO startEvent(String username, String eventName) throws Exception {
@@ -227,21 +251,18 @@ public class ClientUtil {
         String url = BASE_URL + "/events?eventName=" + encode(eventName)
                 + "&action=isMarketMaker&username=" + encode(username);
 
-        // 2. Build the GET request
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
                 .build();
 
-        // 3. Send the request
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
             throw new RuntimeException("Failed to check market maker: server error " + response.statusCode());
         }
 
-        // 4. Parse the JSON response back into a boolean
-        return new Gson().fromJson(response.body(), Boolean.class);
+        return gson.fromJson(response.body(), Boolean.class);
     }
 
 
