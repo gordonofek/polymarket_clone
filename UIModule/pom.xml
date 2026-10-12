@@ -34,6 +34,13 @@
     </dependencies>
 
     <build>
+        <!--
+            mvnw.cmd package builds the client folder that is submitted, target/client/:
+              guess-market-client.jar   (Main-Class Launcher, Class-Path lib/...)
+              lib/                      (dto, gson and the JavaFX jars)
+              run.bat                   (java -jar guess-market-client.jar)
+        -->
+        <finalName>guess-market-client</finalName>
         <plugins>
             <!-- mvn -pl UIModule javafx:run -->
             <plugin>
@@ -42,6 +49,69 @@
                 <configuration>
                     <mainClass>Main</mainClass>
                 </configuration>
+            </plugin>
+
+            <!-- the runnable jar. Launcher (not Main) is the entry point: a main class that extends
+                 Application refuses to start when JavaFX is on the class path instead of the module path -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <outputDirectory>${project.build.directory}/client</outputDirectory>
+                    <archive>
+                        <manifest>
+                            <mainClass>Launcher</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                        <manifestEntries>
+                            <!-- JavaFX loads its native libraries; without this Java 25 prints a warning on start -->
+                            <Enable-Native-Access>ALL-UNNAMED</Enable-Native-Access>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+
+            <!-- every jar the client needs at runtime, next to the client jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-client-libs</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/client/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- run.bat from UIModule/package/ goes next to the jar -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-run-bat</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/client</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>package</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

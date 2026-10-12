@@ -27,9 +27,17 @@ All libraries (JavaFX, JAXB, Gson, Servlet API) are downloaded by Maven – noth
 From the command line (no Maven install needed, the wrapper downloads it):
 
 ```
-mvnw.cmd package            # build everything (web/target/guess-market.war)
+mvnw.cmd package            # build everything (web/target/guess-market.war + UIModule/target/client/)
 mvnw.cmd -pl UIModule javafx:run
 ```
+
+## Submission files
+
+`mvnw.cmd package` produces both parts of the submission:
+
+- `web/target/guess-market.war` – goes into Tomcat's `webapps` folder (served at `http://localhost:8080/guess-market`).
+- `UIModule/target/client/` – the client folder: `guess-market-client.jar`, `lib/` (dto, Gson, JavaFX)
+  and `run.bat`, which starts it with `java -jar guess-market-client.jar`. `run.bat` itself lives in `UIModule/package/`.
 
 ## Rules
 
