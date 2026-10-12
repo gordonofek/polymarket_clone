@@ -1,5 +1,6 @@
 package servlets;
 
+import com.google.gson.JsonObject;
 import engine.Engine;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -11,12 +12,20 @@ import java.io.InputStream;
 import java.io.IOException;
 
 @WebServlet(name = "FileUploadServlet", urlPatterns = "/FileUpload")
-//@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
+@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 5, maxRequestSize = 1024 * 1024 * 5 * 5)
 
 public class FileUploadServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // the uploader becomes the market maker of every event in the file
+        String userName = request.getParameter("userName");
+        if (userName == null || userName.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"success\": false, \"message\": \"Missing userName parameter\"}");
+            return;
+        }
+
         try {
             // getting the InputStream from the request using built in function
             InputStream fileContent = request.getInputStream();
@@ -25,14 +34,18 @@ public class FileUploadServlet extends HttpServlet {
             Engine engine = (Engine) getServletContext().getAttribute("engine");
 
             // תצטרך לוודא שהפונקציה שלך במנוע יודעת לקבל InputStream במקום נתיב לקובץ
-            engine.loadDataFromXML(fileContent);
+            engine.loadDataFromXML(fileContent, userName);
 
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().write("{\"success\": true, \"message\": \"File loaded successfully\"}");
 
         } catch (Exception e) {
+            // Gson escapes quotes/newlines in the message (XML parser errors often have them)
+            JsonObject body = new JsonObject();
+            body.addProperty("success", false);
+            body.addProperty("message", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"success\": false, \"message\": \"" + e.getMessage() + "\"}");
+            response.getWriter().write(body.toString());
         }
     }
 }

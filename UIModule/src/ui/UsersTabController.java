@@ -1,24 +1,26 @@
 package ui;
 
-import engine.EngineInterface;
-import engine.dto.*;
+import dto.*;
 
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.layout.VBox;
+import ui.network.ClientUtil;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * Controller for the Users tab (users-tab.fxml).
- * Picking a user here sets the active user in AppState, which the rest of the UI listens to.
+ * Controller for the Users tab (users-tab.fxml): the public users directory.
+ * Picking a user shows the events they are market maker of; the active (logged in) user never changes.
+ * The logged in user's own balance and portfolio are in the Profile tab.
  */
 public class UsersTabController {
 
@@ -27,126 +29,101 @@ public class UsersTabController {
     @FXML private TableColumn<UserSummaryDTO, String> userNameCol;
     @FXML private TableColumn<UserSummaryDTO, Number> userBalanceCol;
 
-    // top header
+    // top banner
     @FXML private Label userNameLabel;
     @FXML private Label userBalanceLabel;
 
-    // portfolio table
-    @FXML private TableView<PortfolioItemDTO> portfolioTableView;
-    @FXML private TableColumn<PortfolioItemDTO, String> portfolioEventCol;
-    @FXML private TableColumn<PortfolioItemDTO, String> portfolioOptionCol;
-    @FXML private TableColumn<PortfolioItemDTO, Number> portfolioSharesCol;
-    @FXML private TableColumn<PortfolioItemDTO, String> portfolioStatusCol;
-    @FXML private TableColumn<PortfolioItemDTO, Number> portfolioProfitLossCol;
-
-    // event overview
-    @FXML private Label userEventTitleLabel;
-    @FXML private VBox userEventOptionsBox;
+    // market maker events table
+    @FXML private TableView<EventSummaryDTO> mmEventsTableView;
+    @FXML private TableColumn<EventSummaryDTO, String> mmEventIdCol;
+    @FXML private TableColumn<EventSummaryDTO, String> mmEventNameCol;
+    @FXML private TableColumn<EventSummaryDTO, String> mmEventStatusCol;
+    @FXML private TableColumn<EventSummaryDTO, String> mmEventMethodCol;
 
     private AppState state;
-    private EngineInterface engine;
+    private ClientUtil clientUtil;
+    private Timeline autoRefresher;
+
+    // the user whose details are shown (null = show the logged in user)
+    private String viewedUser;
+
+    // events from the last refresh, so a click can filter them without another request
+    private List<EventSummaryDTO> allEvents = List.of();
+
+    // what one refresh brings back from the server
+    private record UsersAndEvents(List<UserSummaryDTO> users, List<EventSummaryDTO> events) {}
 
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
         this.state = state;
-        this.engine = state.getEngine();
+        this.clientUtil = state.getClientUtil();
 
         setupUsersTable();
-        setupPortfolioTable();
+        setupMmEventsTable();
+
+//        autoRefresher = new Timeline(new KeyFrame(Duration.seconds(2), e -> refresh()));
+//        autoRefresher.setCycleCount(Timeline.INDEFINITE);
+//        autoRefresher.play();
     }
 
-    // reloads the users list from the engine and reselects the active user
-    public void refresh() {
-        List<UserSummaryDTO> updatedUsers = engine.getAllUsers();
-        usersTableView.getItems().setAll(updatedUsers);
-        String activeUser = state.getActiveUser();
-        if(activeUser != null) {
-            for (UserSummaryDTO user : updatedUsers) {
-                if (user.name().equals(activeUser)) {
-                    // reselect the user in the table
-                    usersTableView.getSelectionModel().select(user);
-                    loadUserDetails(user);
-                    break;
+    // reloads the users and events from the server and re-shows the viewed user
+    public void refresh()
+    {
+        Task<UsersAndEvents> fetchTask = new Task<>()
+        {
+            @Override
+            protected UsersAndEvents call() throws Exception
+            {
+                return new UsersAndEvents(clientUtil.getUsersSummary(), clientUtil.getEventsSummary());
+            }
+        };
+
+        fetchTask.setOnSucceeded(e ->
+        {
+            UsersAndEvents result = fetchTask.getValue();
+            allEvents = result.events();
+
+            // set before setAll, so re-selecting the row below doesn't count as a new click
+            String userToShow = viewedUser != null ? viewedUser : state.getActiveUser();
+            viewedUser = userToShow;
+            usersTableView.getItems().setAll(result.users());
+            if (userToShow != null) {
+                for (UserSummaryDTO user : result.users()) {
+                    if (user.name().equals(userToShow)) {
+                        usersTableView.getSelectionModel().select(user);
+                        showUser(user);
+                        break;
+                    }
                 }
             }
-        }
+        });
+
+        fetchTask.setOnFailed(e -> {
+            System.err.println("Failed to load users: " + fetchTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     // clears everything shown for the previously selected user
     public void reset() {
+        viewedUser = null;
+        allEvents = List.of();
         usersTableView.getSelectionModel().clearSelection();
         userNameLabel.setText("Select a user...");
         userBalanceLabel.setText("$0.00");
-        portfolioTableView.getItems().clear();
-        userEventOptionsBox.getChildren().clear();
-        userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
+        mmEventsTableView.getItems().clear();
     }
 
-    private void loadUserDetails(UserSummaryDTO user)
-    {
-        UserDetailsDTO details = engine.getUserDetails(user.name());
-        userNameLabel.setText(details.name());
-        userBalanceLabel.setText(String.format("$%.2f", details.balance()));
-        portfolioTableView.getItems().clear();
-        userEventOptionsBox.getChildren().clear();
-        userEventTitleLabel.setText("Select an event from the portfolio to view its current state.");
-
-        portfolioTableView.getItems().addAll(details.portfolio());
-    }
-
-    private void populateUserEventOverview(EventSummaryDTO event, String username) {
-        userEventTitleLabel.setText("Overview for: " + event.name());
-        userEventOptionsBox.getChildren().clear();
-
-        boolean isOrderBook = event.tradingMethodType().contains("ORDER_BOOK");
-        boolean isClosed = event.status().equals("CLOSED");
-
-        // Fetch the compiled data from the Engine!
-        UserEventOverviewDTO overview = engine.getUserEventOverview(username, event.name());
-
-        VBox contentBox = new VBox(10);
-
-        Label commLabel = new Label(String.format("Total Commission Paid: $%.2f", overview.totalCommissionPaid()));
-        commLabel.getStyleClass().add("overview-comm-label");
-        contentBox.getChildren().add(commLabel);
-
-        if (isOrderBook) {
-            Label obLabel = new Label("Order Book Holdings & Costs:");
-            obLabel.getStyleClass().add("overview-header-label");
-            contentBox.getChildren().add(obLabel);
-
-            // Loop through options and display Total Paid
-            for (Map.Entry<String, Double> entry : overview.optionInvestments().entrySet()) {
-                Label optLabel = new Label(String.format("• %s: Spent $%.2f", entry.getKey(), entry.getValue()));
-                contentBox.getChildren().add(optLabel);
-            }
-
-            if (isClosed) {
-                Label plLabel = new Label(String.format("Total Profit/Loss: $%.2f", overview.profitLoss()));
-                plLabel.getStyleClass().add("overview-pl-label");
-                contentBox.getChildren().add(plLabel);
-            }
-        } else {
-            Label lmsrLabel = new Label("LMSR Trade History:");
-            lmsrLabel.getStyleClass().add("overview-header-label");
-            contentBox.getChildren().add(lmsrLabel);
-
-            if (overview.userTradeHistory().isEmpty()) {
-                contentBox.getChildren().add(new Label("No trades recorded yet."));
-            } else {
-                for (TradeRecordDTO trade : overview.userTradeHistory()) {
-                    contentBox.getChildren().add(UiUtils.createTradeLabel(trade));
-                }
-            }
-
-            if (isClosed) {
-                Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
-                winnerLabel.getStyleClass().add("overview-winner-label");
-                contentBox.getChildren().add(winnerLabel);
-            }
-        }
-
-        userEventOptionsBox.getChildren().add(contentBox);
+    // fills the banner (name and balance) and the events this user is market maker of
+    private void showUser(UserSummaryDTO user) {
+        userNameLabel.setText(user.name());
+        userBalanceLabel.setText(String.format("$%.2f", user.balance()));
+        mmEventsTableView.getItems().setAll(allEvents.stream()
+                .filter(event -> user.name().equals(event.marketMaker()))
+                .toList());
     }
 
     /**
@@ -173,46 +150,28 @@ public class UsersTabController {
         usersTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
 
         usersTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                loadUserDetails(newSelection);
-                // the Events tab listens to this and updates itself
-                state.setActiveUser(newSelection.name());
+            // only a click on a different user changes the view (refresh() re-selects the same one)
+            if (newSelection != null && !newSelection.name().equals(viewedUser)) {
+                viewedUser = newSelection.name();
+                showUser(newSelection);
             }
         });
     }
 
-    private void setupPortfolioTable() {
-        portfolioEventCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().eventName()));
-        portfolioOptionCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().optionName()));
-        portfolioSharesCol.setCellValueFactory(cellData -> new SimpleIntegerProperty(cellData.getValue().shares()));
-        portfolioStatusCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
-        portfolioProfitLossCol.setCellValueFactory(cellData -> new SimpleDoubleProperty(cellData.getValue().profitLoss()));
-        portfolioProfitLossCol.setCellFactory(column -> new TableCell<>() {
+    private void setupMmEventsTable() {
+        // events have no id, so the row number is shown instead
+        mmEventIdCol.setCellFactory(column -> new TableCell<>() {
             @Override
-            protected void updateItem(Number pl, boolean empty) {
-                super.updateItem(pl, empty);
-                if (empty || pl == null) {
-                    setText(null);
-                } else {
-                    setText(String.format("$%.2f", pl.doubleValue()));
-                }
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty ? null : String.valueOf(getIndex() + 1));
             }
         });
+        mmEventNameCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().name()));
+        mmEventStatusCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().status().replace("_", " ")));
+        mmEventMethodCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().tradingMethodType().replace("_", " ")));
 
-        portfolioTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
-
-        portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-            if (newSelection != null) {
-                // Find the event the portfolio row belongs to
-                EventSummaryDTO selectedPortfolioEvent = engine.getAllEvents().stream()
-                        .filter(e -> e.name().equals(newSelection.eventName()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (selectedPortfolioEvent != null) {
-                    populateUserEventOverview(selectedPortfolioEvent, state.getActiveUser());
-                }
-            }
-        });
+        mmEventsTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
+        mmEventsTableView.setPlaceholder(new Label("This user isn't market maker of any event."));
     }
 }

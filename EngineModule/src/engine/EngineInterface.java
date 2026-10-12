@@ -1,7 +1,7 @@
 package engine;
 
-import engine.dto.*;
-import internals.ActionType;
+import dto.*;
+
 
 import java.io.InputStream;
 import java.util.List;
@@ -13,9 +13,10 @@ public interface EngineInterface {
     // ==========================================
 
     /**
-     * טוען נתונים מקובץ XML ומרסט את המערכת.
+     * Loads the events from an XML file and adds them to the existing ones.
+     * The uploader becomes the market maker of every loaded event.
      */
-    void loadDataFromXML(InputStream fileContent) throws Exception;
+    void loadDataFromXML(InputStream fileContent, String uploader) throws Exception;
 
     /**
      * מחזיר true אם נטענו נתונים בהצלחה והמערכת מוכנה לעבודה.
@@ -76,8 +77,9 @@ public interface EngineInterface {
 
     /**
      * סוגר אירוע פעיל, מכריז על מנצח ומחזיר את נתוני הסגירה (פקודה 5).
+     * only the event's market maker may close it.
      */
-    CloseEventReceiptDTO closeEvent(String eventName, String winningOption);
+    CloseEventReceiptDTO closeEvent(String username, String eventName, String winningOption);
 
     /**
      * opens the event. checks the cost, market maker's balance, deducts the money and distributes the starting shares for Order Book events.
@@ -88,6 +90,30 @@ public interface EngineInterface {
      * adds a new user when we login to the server(from part 3)
      */
     public boolean addUser(String username);
+
+    /**
+     * logs a user in (names are case-insensitive). a new name creates the user, a name that logged out
+     * before gets its account back. throws IllegalArgumentException if that name is already logged in.
+     * returns the user's name as stored (the spelling they first used).
+     */
+    String login(String username);
+
+    /**
+     * marks the user as logged out, so their name can log in again.
+     */
+    void logout(String username);
+
+    /**
+     * adds money to the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user or an amount that isn't positive.
+     */
+    double depositFunds(String username, double amount);
+
+    /**
+     * takes money out of the user's balance. returns the new balance.
+     * throws IllegalArgumentException for an unknown user, an amount that isn't positive, or more than the balance.
+     */
+    double withdrawFunds(String username, double amount);
 
     // saves the current state of the program to bin file
     void saveState(String filePath);

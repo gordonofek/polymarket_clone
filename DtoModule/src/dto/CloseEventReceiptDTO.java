@@ -1,4 +1,4 @@
-package engine.dto;
+package dto;
 
 public record CloseEventReceiptDTO(
         boolean isSuccess,

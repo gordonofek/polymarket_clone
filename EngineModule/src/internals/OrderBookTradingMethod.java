@@ -1,5 +1,7 @@
 package internals;
 
+import dto.ActionType;
+
 import java.io.Serializable;
 import java.util.*;
 
@@ -179,8 +181,9 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
             //calc commission(if there is ON_PURCHASE in this event) and creating TradeResult to add to tradeHistory
             double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
+            // the buyer pays the commission on top of the price (like LMSR), the seller gets the price only
             TradeResult trade1 = new TradeResult(buy_request.getOrderId(), buy_request.getUsername(),true, optionName,
-                    ActionType.BUY, tradedShares, totalTransactionCost,
+                    ActionType.BUY, tradedShares, totalTransactionCost + commission,
                     commission, "Bought successfully");
 
             TradeResult trade2 = new TradeResult(sell_request.getOrderId(), sell_request.getUsername(),true, optionName,
@@ -284,8 +287,9 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
                 double commission = calculateCommission(totalTransactionCost, CommissionType.ON_PURCHASE);
 
                 // 4. Create the receipt and add it to the history
+                // the buyer pays the commission on top of the price; the pool only gets the price
                 TradeResult trade = new TradeResult(topBuyer.getOrderId(), topBuyer.getUsername(),true,
-                        optionName, ActionType.BUY, minShares, totalTransactionCost, commission,
+                        optionName, ActionType.BUY, minShares, totalTransactionCost + commission, commission,
                         "Mint successful");
 
                 currentMatches.add(trade);
@@ -320,6 +324,19 @@ public class OrderBookTradingMethod implements TradingMethods, Serializable {
     @Override
     public double getPoolValue() {
         return poolValue;
+    }
+
+    // shares of this option the user already offered for sale and that are still waiting in the book
+    public int getPendingSellAmount(String username, String optionName) {
+        int pending = 0;
+        for (Queue<TradeRequest> queue : sell_requests.get(optionName).values()) {
+            for (TradeRequest request : queue) {
+                if (request.getUsername().equals(username)) {
+                    pending += request.getAmount();
+                }
+            }
+        }
+        return pending;
     }
 
     public int getInitialInvestment() {return this.initialInvestment;}

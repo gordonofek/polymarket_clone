@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<SplitPane dividerPositions="0.30" prefHeight="160.0" prefWidth="200.0" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ui.ProfileTabController">
+   <items>
+      <!-- LEFT SIDE: Profile Info & Ledger -->
+      <VBox spacing="15.0" styleClass="card-panel">
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+         <children>
+            <Label alignment="CENTER" text="My Profile" styleClass="main-app-title">
+               <font>
+                  <Font name="System Bold" size="28.0" />
+               </font>
+            </Label>
+
+            <!-- User Stats Box -->
+            <VBox spacing="5.0" styleClass="profile-info-box">
+               <Label text="Username:" styleClass="comm-title-label"/>
+               <Label fx:id="profileUsernameLabel" text="Loading..." styleClass="event-title-label"/>
+
+               <Label text="Available Balance:" styleClass="comm-title-label">
+                  <VBox.margin><Insets top="10.0"/></VBox.margin>
+               </Label>
+               <Label fx:id="profileBalanceLabel" text="\$0.00" styleClass="option-price-label"/>
+            </VBox>
+
+            <!-- Financial Actions -->
+            <HBox spacing="10.0" alignment="CENTER_LEFT">
+               <children>
+                  <Button fx:id="addFundsBtn" mnemonicParsing="false" text="Add Funds" styleClass="buy-option-btn"/>
+                  <Button fx:id="withdrawFundsBtn" mnemonicParsing="false" text="Withdraw" styleClass="sell-option-btn"/>
+               </children>
+            </HBox>
+
+            <!-- Personal Ledger / History -->
+            <Label styleClass="event-title-label" text="Balance History">
+               <VBox.margin><Insets top="15.0"/></VBox.margin>
+            </Label>
+            <TableView fx:id="balanceTableView" styleClass="borderless-list-view" VBox.vgrow="ALWAYS">
+               <columnResizePolicy>
+                  <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+               </columnResizePolicy>
+               <columns>
+                  <TableColumn fx:id="historyActionCol" prefWidth="100.0" reorderable="false" text="Action" />
+                  <TableColumn fx:id="historyAmountCol" prefWidth="100.0" reorderable="false" text="Amount" />
+                  <TableColumn fx:id="historyDetailsCol" prefWidth="200.0" reorderable="false" text="Details" />
+               </columns>
+            </TableView>
+         </children>
+      </VBox>
+
+      <!-- RIGHT SIDE: Personal Portfolio & Event Details -->
+      <VBox spacing="15.0">
+         <padding>
+            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+         </padding>
+         <children>
+            <SplitPane dividerPositions="0.5" orientation="VERTICAL" styleClass="transparent-split-pane" VBox.vgrow="ALWAYS">
+               <items>
+                  <!-- Top Half: Portfolio Table -->
+                  <VBox spacing="10.0" styleClass="card-panel">
+                     <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                     </padding>
+                     <children>
+                        <Label styleClass="event-title-label" text="My Portfolio" />
+                        <TableView fx:id="portfolioTableView" styleClass="borderless-list-view" VBox.vgrow="ALWAYS">
+                           <columnResizePolicy>
+                              <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                           </columnResizePolicy>
+                           <columns>
+                              <TableColumn fx:id="portfolioEventCol" prefWidth="250.0" reorderable="false" text="Event Name" />
+                              <TableColumn fx:id="portfolioOptionCol" prefWidth="120.0" reorderable="false" text="Option" />
+                              <TableColumn fx:id="portfolioSharesCol" prefWidth="120.0" reorderable="false" text="Shares Owned" />
+                              <TableColumn fx:id="portfolioStatusCol" prefWidth="120.0" reorderable="false" text="Status" />
+                              <TableColumn fx:id="portfolioProfitLossCol" prefWidth="120.0" reorderable="false" text="Profit/Loss" />
+                           </columns>
+                        </TableView>
+                     </children>
+                  </VBox>
+
+                  <!-- Bottom Half: Selected Event Overview -->
+                  <VBox spacing="10.0" styleClass="card-panel">
+                     <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                     </padding>
+                     <children>
+                        <Label styleClass="event-title-label" text="Selected Event Overview" />
+                        <Label fx:id="userEventTitleLabel" styleClass="event-desc-label" text="Select an event from your portfolio to view its current state." wrapText="true" />
+                        <ScrollPane fitToWidth="true" styleClass="transparent-scroll-pane" VBox.vgrow="ALWAYS">
+                           <content>
+                              <VBox fx:id="userEventOptionsBox" spacing="10.0" />
+                           </content>
+                        </ScrollPane>
+                     </children>
+                  </VBox>
+               </items>
+            </SplitPane>
+         </children>
+      </VBox>
+   </items>
+</SplitPane>

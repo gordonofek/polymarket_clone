@@ -1,8 +1,9 @@
 package ui;
 
-import engine.EngineInterface;
-import engine.dto.*;
+import dto.*;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -10,12 +11,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.File;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.List;
 
 /**
@@ -25,7 +23,8 @@ import java.util.List;
 public class MainController {
 
     private final AppState state = new AppState();
-    private final EngineInterface engine = state.getEngine();
+    // הוסף משתנה ברמת המחלקה:
+    private Timeline deltaTimeline;
 
     // Top part
     @FXML private Button loadFileBtn;
@@ -33,7 +32,12 @@ public class MainController {
     @FXML private ProgressBar progressBar;
 
     // Tab
+    @FXML private Tab eventsTab;
     @FXML private Tab usersTab;
+    @FXML private Tab profileTab;
+
+    // Profile tab (profile-tab.fxml), injected from <fx:include fx:id="profileTabContent">
+    @FXML private ProfileTabController profileTabContentController;
 
     // Events tab (events-tab.fxml), injected from <fx:include fx:id="eventsTabContent">
     @FXML private EventsTabController eventsTabContentController;
@@ -57,6 +61,7 @@ public class MainController {
         // all tabs share the same state
         eventsTabContentController.init(state);
         usersTabContentController.init(state);
+        profileTabContentController.init(state);
         settingsTabContentController.init(state);
 
         if (usersTab != null) {
@@ -64,17 +69,27 @@ public class MainController {
                 if (isNowSelected) usersTabContentController.refresh();
             });
         }
+        // balance and prices may have changed in another tab (deposit/withdraw) or by other users
+        eventsTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) eventsTabContentController.updateEvents();
+        });
+        profileTab.selectedProperty().addListener((obs, wasSelected, isNowSelected) -> {
+            if (isNowSelected) profileTabContentController.refresh();
+        });
+        startDeltaFetching();
     }
 
     public void loadData(List<EventSummaryDTO> events)
     {
         // clear the selected event and user so nothing points at the previously loaded file
+        // the logged in user stays the same, only the users tab view is cleared
         eventsTabContentController.reset();
-        state.setActiveUser(null);
         usersTabContentController.reset();
+        profileTabContentController.reset();
 
         eventsTabContentController.showEvents(events);
         usersTabContentController.refresh();
+        profileTabContentController.refresh();
     }
 
     @FXML
@@ -91,30 +106,14 @@ public class MainController {
             filePathField.setText("Uploading to server...");
             progressBar.setVisible(true);
 
-            // אנחנו יוצרים Task כדי שבקשת הרשת לא תתקע את המסך הגרפי
-            Task<Boolean> uploadTask = new Task<>() {
+            // the upload runs in the background so the window doesn't freeze
+            // the logged in user becomes the market maker of the uploaded events
+            String uploader = state.getActiveUser();
+            Task<Void> uploadTask = new Task<>() {
                 @Override
-                protected Boolean call() throws Exception {
-                    // 1. יצירת לקוח HTTP
-                    HttpClient client = HttpClient.newHttpClient();
-
-                    // 2. בניית הבקשה. שים לב שאנחנו שמים את הקובץ ישירות ב-Body!
-                    HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create("http://localhost:8080/FileUpload")) // ודא שזו הכתובת הנכונה
-                            .header("Content-Type", "application/xml") // השרת ידע שזה XML
-                            .POST(HttpRequest.BodyPublishers.ofFile(selectedFile.toPath()))
-                            .build();
-
-                    // 3. שליחת הבקשה והמתנה לתשובה מהשרת
-                    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                    // 4. בדיקה האם השרת החזיר קוד 200 (הצלחה) או שגיאה
-                    if (response.statusCode() == 200) {
-                        return true;
-                    } else {
-                        // אם יש שגיאה (למשל כפילות בשם או XML לא תקין), נזרוק את הודעת השגיאה שהשרת החזיר
-                        throw new Exception(response.body());
-                    }
+                protected Void call() throws Exception {
+                    state.getClientUtil().uploadFile(selectedFile, uploader);
+                    return null;
                 }
             };
 
@@ -124,7 +123,13 @@ public class MainController {
                 loadFileBtn.setDisable(false);
                 filePathField.setText("Loaded: " + selectedFile.getName());
 
-                // כאן תוכל להקפיץ Alert של הצלחה ולרענן את רשימת האירועים במסך!
+                // Show a success message
+                UiUtils.showAlert(Alert.AlertType.INFORMATION, "Success", "File uploaded and loaded successfully!", state.getThemeStylesheets());
+
+                // Refresh the events tab with the new data from the server
+                eventsTabContentController.updateEvents();
+                usersTabContentController.refresh();
+                profileTabContentController.refresh();
             });
 
             // מה לעשות אם ההעלאה נכשלה
@@ -133,7 +138,7 @@ public class MainController {
                 loadFileBtn.setDisable(false);
                 filePathField.setText("Upload failed");
 
-                // כאן תוכל להקפיץ Alert של שגיאה עם הטקסט: uploadTask.getException().getMessage()
+                UiUtils.showAlert(Alert.AlertType.ERROR, "Upload Failed", uploadTask.getException().getMessage(), state.getThemeStylesheets());
             });
 
             // הפעלת ה-Task בת'רד נפרד
@@ -141,4 +146,45 @@ public class MainController {
         }
     }
 
+    public void setLoggedInUser(String username) {
+        state.setActiveUser(username);
+
+        // the server may already have events (uploaded by other users); the Events tab
+        // starts selected, so its tab listener won't fire, so load them here
+        eventsTabContentController.updateEvents();
+    }
+
+    public void startDeltaFetching() {
+        deltaTimeline = new Timeline(new KeyFrame(Duration.seconds(2), event -> {
+
+            int currentVersion = state.getLocalVersion(); // מקבל את הגרסה מ-AppState
+
+            state.getClientUtil().fetchDeltaUpdates(currentVersion,
+                    // התיקון כאן: מורידים את המילה EventsDeltaDTO, וכותבים רק את שם המשתנה
+                    deltaDTO -> {
+                    // 1. השרת החזיר מידע! מעדכנים את הגרסה המקומית
+                        state.setLocalVersion(deltaDTO.serverVersion());
+
+
+                        System.out.println("CLIENT: Got Delta! New local version: " + state.getLocalVersion() + " | Events updated: " + deltaDTO.updatedEvents().size());
+                        // 2. מחלקים את העבודה לכרטיסיות:
+
+                        // א. עדכון טבלת האירועים המרכזית (רק מה שהשתנה!)
+                        eventsTabContentController.mergeUpdatedEvents(deltaDTO.updatedEvents());
+
+                        // ב. עדכון הפורטפוליו והיוזרים
+                        // מכיוון שכשהמחיר של אירוע משתנה, השווי שלו בפורטפוליו משתנה,
+                        // ומכיוון שבינתיים אין לך Delta ליוזרים, נקרא פשוט לרענון היוזרים הקיים
+                        usersTabContentController.refresh();
+                    },
+                    // גם כאן, רק שם המשתנה error
+                    error -> {
+                        System.err.println("Delta fetch failed: " + error);
+                    }
+            );
+        }));
+
+        deltaTimeline.setCycleCount(Timeline.INDEFINITE);
+        deltaTimeline.play();
+    }
 }

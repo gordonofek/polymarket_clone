@@ -2,19 +2,16 @@ package servlets;
 
 import com.google.gson.Gson;
 import engine.Engine;
-import engine.dto.EventDetailsDTO;
-import engine.dto.EventSummaryDTO;
-import engine.dto.TradeReceiptDTO;
-import internals.ActionType;
-import internals.Event;
-import internals.TradeRequest;
+import dto.EventDetailsDTO;
+import dto.EventSummaryDTO;
+import dto.TradeReceiptDTO;
+import dto.ActionType;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.util.List;
 
 @WebServlet(name = "TradeServlet", urlPatterns = "/tradeRequest")
 public class TradeServlet extends HttpServlet
@@ -26,7 +23,7 @@ public class TradeServlet extends HttpServlet
         Engine engine = (Engine) getServletContext().getAttribute("engine");
         response.setContentType("application/json");
 
-        String username = request.getParameter("username");
+        String username = request.getParameter("userName");
         String eventName = request.getParameter("eventName");
         String optionName = request.getParameter("optionName");
         String tradeTypeStr = request.getParameter("tradeType");

@@ -267,7 +267,7 @@
     -fx-border-width: 2 1 0 1;
 }
 .tab-pane .tab:selected .tab-label { -fx-text-fill: #38bdf8; }
-.tab-pane .tab:focus, .tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
+.tab-pane:focused .tab:selected { -fx-focus-color: transparent; -fx-faint-focus-color: transparent; }
 
 /* ==================================
     TABLE VIEW STYLING
@@ -435,3 +435,29 @@
 .modern-dialog > .content.label { -fx-text-fill: #e2e8f0; -fx-font-size: 14px; -fx-padding: 10px; }
 .modern-dialog .header-panel { -fx-background-color: #0b192c; }
 .modern-dialog .header-panel .label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #38bdf8; }
+
+/* =========================================
+   PROFILE & USERS TAB
+   (kept after the split-pane patch above so it wins)
+========================================= */
+.transparent-split-pane { -fx-background-color: transparent; -fx-padding: 0; }
+.transparent-split-pane > .split-pane-divider { -fx-background-color: transparent; }
+
+.profile-info-box {
+    -fx-background-color: #1e293b;
+    -fx-border-color: #334155;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 15;
+}
+
+.user-banner { -fx-background-color: #1e3a8a; -fx-border-color: #38bdf8; }
+.user-banner .main-app-title { -fx-text-fill: #7dd3fc; }
+
+/* chart colors for events with more than 4 options */
+.poly-chart .default-color4.chart-series-line { -fx-stroke: #a78bfa; }
+.poly-chart .default-color4.chart-legend-item-symbol { -fx-background-color: #a78bfa, transparent; }
+.poly-chart .default-color4.endpoint-marker { -fx-background-color: #a78bfa; }
+.poly-chart .default-color5.chart-series-line { -fx-stroke: #fbbf24; }
+.poly-chart .default-color5.chart-legend-item-symbol { -fx-background-color: #fbbf24, transparent; }
+.poly-chart .default-color5.endpoint-marker { -fx-background-color: #fbbf24; }

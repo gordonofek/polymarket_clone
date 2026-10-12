@@ -1,7 +1,11 @@
 package internals;
 
+import dto.BalanceChangeType;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -26,6 +30,9 @@ public class User {
     // Event name -> Total Payout received (used for profit/loss)
     private Map<String, Double> payoutsReceived = new HashMap<>();
 
+    // every change to the balance (trades, commissions, payouts, deposits...), oldest first
+    private List<BalanceChange> balanceHistory = new ArrayList<>();
+
     public User(String name) {
         this.name = name;
         this.balance = 0.0;
@@ -43,19 +50,29 @@ public class User {
     public double getBalance() {return balance;}
     public Map<String, Map<String, Integer>> getPortfolio() {return this.portfolio;}
 
-    public void addFunds(double amount) {
+    // every balance change goes through addFunds/deductFunds, so each one gets a row in the balance history
+    public void addFunds(double amount, BalanceChangeType type, String details) {
         this.balance += amount;
 
         // decided that if the user goes back into positive balance, then he gets unblocked.
         if (this.balance >= 0 && this.isBlocked) {
             this.isBlocked = false;
         }
+        recordBalanceChange(type, amount, details);
     }
 
-    public void deductFunds(double amount) {
+    public void deductFunds(double amount, BalanceChangeType type, String details) {
         this.balance -=amount;
         if(this.balance < 0) {
             this.isBlocked = true;
+        }
+        recordBalanceChange(type, -amount, details);
+    }
+
+    // a $0 change (e.g. a 0% commission) isn't worth a row
+    private void recordBalanceChange(BalanceChangeType type, double signedAmount, String details) {
+        if (signedAmount != 0) {
+            balanceHistory.add(new BalanceChange(type, signedAmount, this.balance, System.currentTimeMillis(), details));
         }
     }
 
@@ -109,5 +126,9 @@ public class User {
 
     public Map<String, Map<String, Double>> getOptionInvestments() {
         return this.optionInvestments;
+    }
+
+    public List<BalanceChange> getBalanceHistory() {
+        return balanceHistory;
     }
 }

@@ -1,9 +1,9 @@
 package servlets;
 
+import dto.*;
+
 import com.google.gson.Gson;
 import engine.Engine;
-import engine.dto.EventDetailsDTO;
-import engine.dto.EventSummaryDTO;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,29 +16,97 @@ import java.util.List;
 public class EventsServlet extends HttpServlet
 {
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
-    {
-        // 1. שליפת המנוע מהזיכרון של השרת
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Engine engine = (Engine) getServletContext().getAttribute("engine");
 
-        // Check if the client is asking for a specific event
         String eventName = request.getParameter("eventName");
+        String action = request.getParameter("action");
+
         response.setContentType("application/json");
 
-        if(eventName == null)
-        {
-            // SCENARIO 1: No parameter was sent. The client wants the left-side list.
-            List<EventSummaryDTO> eventsSummaries = engine.getAllEvents();
-            String json = new Gson().toJson(eventsSummaries);
-            response.getWriter().write(json);
+        // ======= החלק החדש של ה-Delta Fetching =======
+        if (eventName == null) {
+            String versionStr = request.getParameter("version");
+
+            if (versionStr != null) {
+                // SCENARIO 1: Delta Fetching
+                int clientVersion = Integer.parseInt(versionStr);
+                EventsDeltaDTO delta = engine.getEventsDelta(clientVersion);
+
+                // === פה נמצאת ההדפסה של השרת שביקשת! ===
+                System.out.println("SERVER: Client asked for version " + clientVersion + " | Sending " + delta.updatedEvents().size() + " updated events.");
+
+                response.getWriter().write(new Gson().toJson(delta));
+            } else {
+                // SCENARIO 1.5: משיכה מלאה רגילה
+                List<EventSummaryDTO> eventsSummaries = engine.getAllEvents();
+                response.getWriter().write(new Gson().toJson(eventsSummaries));
+            }
         }
-        else
-        {
-            // SCENARIO 2: A specific event name was sent. The client wants the right-side details.
+        // ======= כל שאר התרחישים הישנים שנשארים בדיוק כמו שהיו =======
+        else if ("participants".equals(action)) {
+            // SCENARIO 2: Return ONLY the participants for the requested event
+            List<ParticipantHoldingDTO> participants = engine.getEventParticipants(eventName);
+            response.getWriter().write(new Gson().toJson(participants));
+        }
+        else if ("isMarketMaker".equals(action)) {
+            // SCENARIO 3: Return a boolean if the user is the Market Maker
+            String username = request.getParameter("username");
+            boolean isMM = engine.isUserMarketMaker(username, eventName);
+            response.getWriter().write(new Gson().toJson(isMM));
+        }
+        else {
+            // SCENARIO 4: Return the general event details
             EventDetailsDTO eventDetails = engine.getEventState(eventName);
-            String json = new Gson().toJson(eventDetails);
-            response.getWriter().write(json);
+            response.getWriter().write(new Gson().toJson(eventDetails));
         }
     }
 
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        Engine engine = (Engine) getServletContext().getAttribute("engine");
+
+        String action = request.getParameter("action");
+        response.setContentType("application/json");
+
+        if ("startEvent".equals(action))
+        {
+            // 1. Extract the parameters sent in the POST body
+            String eventName = request.getParameter("eventName");
+            String username = request.getParameter("username");
+
+            // 2. Execute the engine command
+            TradeReceiptDTO receipt = engine.startEvent(username, eventName);
+
+            // 3. Return the receipt as JSON
+            response.getWriter().write(new Gson().toJson(receipt));
+        }
+        else if ("closeEvent".equals(action)) {
+            // 1. Extract parameters for closing
+            String eventName = request.getParameter("eventName");
+            String winningOption = request.getParameter("winningOption");
+            String username = request.getParameter("username");
+
+            // 2. Execute the engine command
+            CloseEventReceiptDTO receipt = engine.closeEvent(username, eventName, winningOption);
+
+            // 3. Return the receipt as JSON
+            response.getWriter().write(new Gson().toJson(receipt));
+        }
+        else if ("placeOrder".equals(action)) {
+            // 1. Extract all 6 parameters for the trade
+            String username = request.getParameter("username");
+            String eventName = request.getParameter("eventName");
+            String optionName = request.getParameter("optionName");
+            int amount = Integer.parseInt(request.getParameter("amount"));
+            ActionType actionType = ActionType.valueOf(request.getParameter("actionType"));
+            double limitPrice = Double.parseDouble(request.getParameter("limitPrice"));
+
+            // 2. Execute the engine command
+            TradeReceiptDTO receipt = engine.placeOrder(username, eventName, optionName, amount, actionType, limitPrice);
+
+            // 3. Return the receipt as JSON
+            response.getWriter().write(new Gson().toJson(receipt));
+        }
+    }
 }

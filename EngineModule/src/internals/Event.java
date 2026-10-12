@@ -5,6 +5,9 @@ import java.util.Map;
 
 public interface Event {
 
+    public int getVersion();
+    public void setVersion(int version);
+
     String getName();
     String getDescription();
 
