@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Guess Market</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232854b5'/%3E%3Cpath d='M8 22l5-6 4 3 7-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<main id="loginScreen" class="login-screen">
+    <form id="loginForm" class="card-panel login-card" novalidate>
+        <h1 class="main-app-title">Guess Market</h1>
+        <p class="event-desc-label">Log in to start trading</p>
+        <label class="field">
+            <span class="comm-title-label">User name:</span>
+            <input id="usernameField" type="text" autocomplete="username" placeholder="Enter your user name" maxlength="60">
+        </label>
+        <p id="loginError" class="history-sell login-error" hidden></p>
+        <button id="loginBtn" type="submit" class="buy-option-btn wide">Log In</button>
+    </form>
+</main>
+
+<!-- ==================== MAIN SCREEN ==================== -->
+<div id="mainScreen" class="main-screen" hidden>
+    <header class="app-header">
+        <h1 class="main-app-title">Guess Market</h1>
+        <div class="header-user">
+            <span class="comm-title-label">Logged in as</span>
+            <strong id="headerUser"></strong>
+            <button id="logoutBtn" type="button" class="modern-filter">Log Out</button>
+        </div>
+    </header>
+
+    <nav class="tab-bar" role="tablist">
+        <button type="button" role="tab" class="tab active" data-tab="events">Events</button>
+        <button type="button" role="tab" class="tab" data-tab="profile">Profile</button>
+        <button type="button" role="tab" class="tab" data-tab="users">Users</button>
+    </nav>
+
+    <!-- ==================== EVENTS TAB ==================== -->
+    <section id="tab-events" class="tab-content events-tab">
+        <!-- LEFT SIDE: filters and event tiles -->
+        <div class="events-left">
+            <div class="filters">
+                <input id="searchField" type="search" placeholder="Search event by name...">
+                <div class="filter-row">
+                    <span>Filter By:</span>
+                    <select id="methodFilter" class="modern-filter">
+                        <option>All Methods</option><option>LMSR</option><option>Order Book</option>
+                    </select>
+                    <select id="statusFilter" class="modern-filter">
+                        <option>All Statuses</option><option>Open</option><option>Closed</option><option>Not Started</option>
+                    </select>
+                    <select id="commissionFilter" class="modern-filter">
+                        <option>All Commissions</option><option>On Purchase</option><option>On Close</option>
+                    </select>
+                    <button id="clearFiltersBtn" type="button" class="modern-filter">Clear Filters</button>
+                </div>
+            </div>
+            <div id="eventsContainer" class="events-container"></div>
+        </div>
+
+        <!-- RIGHT SIDE: event details and trading -->
+        <div class="events-right">
+            <div class="card-panel user-strip">
+                <span class="comm-title-label">Active User:</span>
+                <span id="eventsUserName" class="event-title-label"></span>
+                <span class="spacer"></span>
+                <span class="comm-title-label">Available Cash:</span>
+                <span id="eventsUserBalance" class="option-price-label">$0.00</span>
+            </div>
+
+            <h2 class="section-title">Event details and trade</h2>
+
+            <div class="card-panel details-panel">
+                <div class="row">
+                    <span id="detailId" class="event-id-label"></span>
+                    <span id="detailMethod"></span>
+                    <span class="spacer"></span>
+                    <span id="detailStatus"></span>
+                </div>
+                <div id="detailTitle" class="event-title-label">Select an event to view details</div>
+                <div id="detailDesc" class="event-desc-label">Click any event tile on the left panel to display full specifications here.</div>
+                <div class="row">
+                    <span class="comm-title-label">Commission Type &amp; Rate:</span>
+                    <span id="detailComm" class="comm-val-label">N/A</span>
+                    <span class="spacer"></span>
+                    <span class="comm-title-label">Account:</span>
+                    <span id="detailAccount" class="comm-val-label">N/A</span>
+                </div>
+                <div id="mmControls" class="row" hidden>
+                    <button id="startEventBtn" type="button" class="mm-start-btn" hidden>Start Event</button>
+                    <button id="closeEventBtn" type="button" class="mm-close-btn" hidden>Close Event</button>
+                </div>
+            </div>
+
+            <div id="optionsContainer" class="options-container"></div>
+
+            <div class="card-panel chart-panel">
+                <div id="priceChart" class="price-chart"></div>
+            </div>
+
+            <div class="two-lists">
+                <div class="card-panel list-panel">
+                    <div id="historyTitle" class="list-title">Participation History</div>
+                    <ul id="historyList" class="list"></ul>
+                </div>
+                <div class="card-panel list-panel">
+                    <div class="list-title">Event Participants</div>
+                    <ul id="participantsList" class="list"></ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== PROFILE TAB ==================== -->
+    <section id="tab-profile" class="tab-content profile-tab" hidden>
+        <div class="card-panel profile-left">
+            <h2 class="main-app-title">My Profile</h2>
+            <div class="profile-info-box">
+                <div class="comm-title-label">Username:</div>
+                <div id="profileUsername" class="event-title-label"></div>
+                <div class="comm-title-label spaced">Available Balance:</div>
+                <div id="profileBalance" class="option-price-label">$0.00</div>
+            </div>
+            <div class="row">
+                <button id="addFundsBtn" type="button" class="buy-option-btn">Add Funds</button>
+                <button id="withdrawBtn" type="button" class="sell-option-btn">Withdraw</button>
+            </div>
+            <div class="event-title-label spaced">Balance History</div>
+            <div class="table-wrap grow">
+                <table class="data-table">
+                    <thead><tr><th>Action</th><th>Amount</th><th>Details</th></tr></thead>
+                    <tbody id="balanceHistoryBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="profile-right">
+            <div class="card-panel">
+                <div class="event-title-label">My Portfolio</div>
+                <div class="table-wrap">
+                    <table class="data-table selectable">
+                        <thead><tr><th>Event Name</th><th>Option</th><th>Shares Owned</th><th>Status</th><th>Profit/Loss</th></tr></thead>
+                        <tbody id="portfolioBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-panel">
+                <div class="event-title-label">Selected Event Overview</div>
+                <div id="overviewTitle" class="event-desc-label">Select an event from your portfolio to view its current state.</div>
+                <div id="overviewBox" class="overview-box"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== USERS TAB ==================== -->
+    <section id="tab-users" class="tab-content users-tab" hidden>
+        <div class="card-panel users-left">
+            <div class="event-title-label">Users</div>
+            <div class="table-wrap grow">
+                <table class="data-table selectable">
+                    <thead><tr><th>User Name</th><th>Balance</th><th>Market Maker</th></tr></thead>
+                    <tbody id="usersBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="users-right">
+            <div class="card-panel user-banner">
+                <div>
+                    <div class="comm-title-label">Viewing Profile:</div>
+                    <div id="viewedUserName" class="main-app-title">Select a user...</div>
+                </div>
+                <span class="spacer"></span>
+                <div class="align-right">
+                    <div class="comm-title-label">Available Balance:</div>
+                    <div id="viewedUserBalance" class="option-price-label">$0.00</div>
+                </div>
+            </div>
+            <div class="card-panel grow">
+                <div class="event-title-label">Market Maker Of</div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>#</th><th>Event Name</th><th>Status</th><th>Trading Method</th></tr></thead>
+                        <tbody id="mmEventsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- dialogs (alerts, trade, funds, close event) are drawn here -->
+<div id="modalRoot"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
