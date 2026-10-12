@@ -1,8 +1,9 @@
 package dto;
 
 public record BalanceHistoryItemDTO(
-        String action, // "DEPOSIT" or "WITHDRAW"
-        double amount,
+        BalanceChangeType type,
+        double amount,       // positive = money in, negative = money out
         double balanceAfter,
-        long timestamp // epoch millis, formatted by the client
+        long timestamp,      // epoch millis, formatted by the client
+        String details       // e.g. "Bought 10 'Yes' in 'Rain' @ $0.60"
 ) {}

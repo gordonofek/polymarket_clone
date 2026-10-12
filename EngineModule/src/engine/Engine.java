@@ -303,7 +303,13 @@ public class Engine implements EngineInterface {
                 if (involvedUser != null)
                 {
                     if (res.action() == ActionType.BUY) {
-                        involvedUser.deductFunds(res.totalCost());
+                        // totalCost includes the on-purchase commission, the per-share price doesn't
+                        double pricePerShare = (res.totalCost() - res.commissionPaid()) / res.sharesProcessed();
+                        String commissionNote = res.commissionPaid() > 0
+                                ? String.format(" (incl. $%.2f commission)", res.commissionPaid()) : "";
+                        involvedUser.deductFunds(res.totalCost(), BalanceChangeType.BUY,
+                                String.format("Bought %d '%s' in '%s' @ $%.2f%s",
+                                        res.sharesProcessed(), res.optionName(), eventName, pricePerShare, commissionNote));
                         involvedUser.addShares(eventName, res.optionName(), res.sharesProcessed());
                         event.recordParticipant(res.username(), res.optionName(), res.sharesProcessed());
 
@@ -312,7 +318,9 @@ public class Engine implements EngineInterface {
                         involvedUser.addOptionInvestment(eventName, res.optionName(), res.totalCost());
 
                     } else if (res.action() == ActionType.SELL) {
-                        involvedUser.addFunds(res.totalCost());
+                        involvedUser.addFunds(res.totalCost(), BalanceChangeType.SELL,
+                                String.format("Sold %d '%s' in '%s' @ $%.2f",
+                                        res.sharesProcessed(), res.optionName(), eventName, res.totalCost() / res.sharesProcessed()));
                         involvedUser.addShares(eventName, res.optionName(), -res.sharesProcessed());
                         event.recordParticipant(res.username(), res.optionName(), -res.sharesProcessed());
 
@@ -332,7 +340,8 @@ public class Engine implements EngineInterface {
                 if (res.commissionPaid() > 0) {
                     User marketMaker = userManager.getUser(event.getMarketMaker());
                     if (marketMaker != null) {
-                        marketMaker.addFunds(res.commissionPaid());
+                        marketMaker.addFunds(res.commissionPaid(), BalanceChangeType.COMMISSION,
+                                String.format("Commission from %s's purchase in '%s'", res.username(), eventName));
                     }
                 }
             }
@@ -375,7 +384,10 @@ public class Engine implements EngineInterface {
                 return new TradeReceiptDTO(false, String.format("Insufficient funds! You need $%.2f to start the event.", cost),0 ,0);
             }
             // deducting funds and opening the event
-            user.deductFunds(cost);
+            String startDetails = method instanceof OrderBookTradingMethod
+                    ? String.format("Opened '%s' (bought %d initial shares of each option)", eventName, sharesToGive)
+                    : String.format("Opened '%s' (LMSR subsidy)", eventName);
+            user.deductFunds(cost, BalanceChangeType.EVENT_START, startDetails);
             event.openEvent();
             event.setVersion(eventManager.incrementAndGetGlobalVersion());
 
@@ -408,13 +420,15 @@ public class Engine implements EngineInterface {
             CloseMarketResult res = event.resolveEvent(winningOption);
             event.setVersion(eventManager.incrementAndGetGlobalVersion());
 
-            // pay the market maker their commission + leftover subsidy
+            // pay the market maker their commission + leftover subsidy (two rows in their balance history)
             String mmName = event.getMarketMaker();
             User marketMaker = userManager.getUser(mmName);
             if (marketMaker != null) {
-                double mmPayout = res.commissionTaken() + res.leftoverSubsidy();
-                marketMaker.addFunds(mmPayout);
-                marketMaker.addPayoutReceived(eventName, mmPayout);
+                marketMaker.addFunds(res.commissionTaken(), BalanceChangeType.COMMISSION,
+                        String.format("Close commission from '%s'", eventName));
+                marketMaker.addFunds(res.leftoverSubsidy(), BalanceChangeType.POOL_RETURN,
+                        String.format("Money left in the pool of '%s'", eventName));
+                marketMaker.addPayoutReceived(eventName, res.commissionTaken() + res.leftoverSubsidy());
             }
 
             // pay the winners
@@ -435,7 +449,11 @@ public class Engine implements EngineInterface {
                     if (winner != null) {
                         double userPayout = userWinningShares * payoutPerShare;
                         double userCommission = userWinningShares * commissionPerShare;
-                        winner.addFunds(userPayout);
+                        String commissionNote = userCommission > 0
+                                ? String.format(" (after $%.2f commission)", userCommission) : "";
+                        winner.addFunds(userPayout, BalanceChangeType.PAYOUT,
+                                String.format("Won with %d '%s' shares in '%s'%s",
+                                        userWinningShares, winningOption, eventName, commissionNote));
                         winner.addPayoutReceived(eventName, userPayout);
                         winner.addCommissionPaid(eventName, userCommission);
                     }
@@ -511,13 +529,14 @@ public class Engine implements EngineInterface {
                     }
                 }
             }
-            // newest first, so the latest deposit/withdrawal is at the top of the table
+            // newest first, so the latest change is at the top of the table
             List<BalanceHistoryItemDTO> balanceHistory = user.getBalanceHistory().reversed().stream()
                     .map(change -> new BalanceHistoryItemDTO(
-                            change.isDeposit() ? "DEPOSIT" : "WITHDRAW",
+                            change.type(),
                             change.amount(),
                             change.balanceAfter(),
-                            change.timestamp()
+                            change.timestamp(),
+                            change.details()
                     )).toList();
 
             return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio, balanceHistory);
@@ -542,8 +561,7 @@ public class Engine implements EngineInterface {
             User user = getExistingUser(username);
             // addFunds also unblocks a user whose balance gets back to 0 or more
             double cents = toValidAmount(amount);
-            user.addFunds(cents);
-            user.addBalanceChange(true, cents);
+            user.addFunds(cents, BalanceChangeType.DEPOSIT, "Deposit");
             return user.getBalance();
         } finally {
             lock.writeLock().unlock();
@@ -562,8 +580,7 @@ public class Engine implements EngineInterface {
                         "Insufficient funds: you have $%.2f.", user.getBalance()));
             }
             double withdrawn = Math.min(cents, user.getBalance());
-            user.deductFunds(withdrawn);
-            user.addBalanceChange(false, withdrawn);
+            user.deductFunds(withdrawn, BalanceChangeType.WITHDRAW, "Withdrawal");
             return user.getBalance();
         } finally {
             lock.writeLock().unlock();

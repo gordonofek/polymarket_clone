@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import javafx.application.Platform;
+import ui.network.ClientUtil;
 
 /**
  * Controller for the login screen (login.fxml).
@@ -97,7 +98,7 @@ public class LoginController {
 
                 HttpClient client = HttpClient.newHttpClient();
                 HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://localhost:8080/login"))
+                        .uri(URI.create(ClientUtil.BASE_URL + "/login"))
                         .header("Content-Type", "application/x-www-form-urlencoded")
                         .POST(HttpRequest.BodyPublishers.ofString(formData))
                         .build();

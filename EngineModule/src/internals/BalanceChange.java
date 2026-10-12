@@ -1,9 +1,12 @@
 package internals;
 
-// one deposit or withdrawal in a user's balance history
+import dto.BalanceChangeType;
+
+// one change to a user's balance, as shown in their balance history
 public record BalanceChange(
-        boolean isDeposit,
-        double amount,
+        BalanceChangeType type,
+        double amount,       // positive = money in, negative = money out
         double balanceAfter,
-        long timestamp // epoch millis
+        long timestamp,      // epoch millis
+        String details
 ) {}

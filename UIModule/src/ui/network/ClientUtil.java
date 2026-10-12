@@ -20,7 +20,8 @@ import java.util.function.Consumer;
 
 public class ClientUtil {
 
-    private static final String BASE_URL = "http://localhost:8080";
+    // server + context path; the context path is the WAR's name (finalName in web/pom.xml)
+    public static final String BASE_URL = "http://localhost:8080/guess-market";
     private final HttpClient client;
     private final Gson gson;
 

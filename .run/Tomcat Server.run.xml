@@ -5,7 +5,7 @@
     <deployment>
       <artifact name="web:war exploded">
         <settings>
-          <option name="CONTEXT_PATH" value="/" />
+          <option name="CONTEXT_PATH" value="/guess-market" />
         </settings>
       </artifact>
     </deployment>

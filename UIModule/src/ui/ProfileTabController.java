@@ -15,6 +15,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import ui.network.ClientUtil;
@@ -280,21 +281,41 @@ public class ProfileTabController {
     }
 
     private void setupBalanceHistoryTable() {
-        historyActionCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(cellData.getValue().action().equals("DEPOSIT") ? "Deposit" : "Withdraw"));
+        historyActionCol.setCellValueFactory(cellData -> new SimpleStringProperty(actionLabel(cellData.getValue().type())));
         historyAmountCol.setCellValueFactory(cellData -> {
-            BalanceHistoryItemDTO item = cellData.getValue();
-            String sign = item.action().equals("DEPOSIT") ? "+" : "-";
-            return new SimpleStringProperty(String.format("%s$%.2f", sign, item.amount()));
+            double amount = cellData.getValue().amount();
+            return new SimpleStringProperty(String.format("%s$%.2f", amount >= 0 ? "+" : "-", Math.abs(amount)));
         });
         historyDetailsCol.setCellValueFactory(cellData -> {
             BalanceHistoryItemDTO item = cellData.getValue();
             String time = Instant.ofEpochMilli(item.timestamp()).atZone(ZoneId.systemDefault()).format(HISTORY_TIME_FORMAT);
-            return new SimpleStringProperty(String.format("Balance: $%.2f  ·  %s", item.balanceAfter(), time));
+            return new SimpleStringProperty(String.format("%s  ·  Balance: $%.2f  ·  %s", item.details(), item.balanceAfter(), time));
+        });
+        // the column is narrow, so hovering a row shows its full details
+        historyDetailsCol.setCellFactory(column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String text, boolean empty) {
+                super.updateItem(text, empty);
+                setText(empty ? null : text);
+                setTooltip(empty || text == null ? null : new Tooltip(text));
+            }
         });
 
         balanceTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
         balanceTableView.setPlaceholder(new Label("No balance history yet."));
+    }
+
+    private static String actionLabel(BalanceChangeType type) {
+        return switch (type) {
+            case DEPOSIT -> "Deposit";
+            case WITHDRAW -> "Withdraw";
+            case BUY -> "Buy";
+            case SELL -> "Sell";
+            case EVENT_START -> "Open Event";
+            case COMMISSION -> "Commission";
+            case PAYOUT -> "Payout";
+            case POOL_RETURN -> "Pool Return";
+        };
     }
 
     private void setupPortfolioTable() {

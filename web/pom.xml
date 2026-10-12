@@ -35,6 +35,8 @@
     </dependencies>
 
     <build>
+        <!-- Tomcat serves a WAR under its file name, so this is also the context path the client uses (ClientUtil.BASE_URL) -->
+        <finalName>guess-market</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

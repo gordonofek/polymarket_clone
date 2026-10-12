@@ -21,13 +21,13 @@ All libraries (JavaFX, JAXB, Gson, Servlet API) are downloaded by Maven – noth
 
 ## Running
 
-1. Run **Tomcat Server** – deploys `web:war exploded` at `http://localhost:8080/`.
+1. Run **Tomcat Server** – deploys `web:war exploded` at `http://localhost:8080/guess-market/`.
 2. Run **Client** – the JavaFX UI.
 
 From the command line (no Maven install needed, the wrapper downloads it):
 
 ```
-mvnw.cmd package            # build everything (web/target/web-1.0-SNAPSHOT.war)
+mvnw.cmd package            # build everything (web/target/guess-market.war)
 mvnw.cmd -pl UIModule javafx:run
 ```
 
