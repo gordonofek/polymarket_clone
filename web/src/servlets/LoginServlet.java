@@ -7,8 +7,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Map;
 
-@WebServlet(name = "LoginServlet", urlPatterns = "/login")
+// /login logs a user in (a name that is already logged in is refused), /logout frees the name again
+@WebServlet(name = "LoginServlet", urlPatterns = {"/login", "/logout"})
 public class LoginServlet extends HttpServlet {
 
     @Override
@@ -22,20 +24,28 @@ public class LoginServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        if (username == null || username.isBlank()) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST); // 400
-            response.getWriter().write("{\"success\": false, \"message\": \"Username can't be empty\"}");
+        if ("/logout".equals(request.getServletPath())) {
+            engine.logout(username);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(new Gson().toJson(Map.of("success", true)));
             return;
         }
 
-        // a new name creates the user; an existing name logs back in as that user
-        boolean didAdd = engine.addUser(username);
+        if (username == null || username.isBlank()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write(new Gson().toJson(Map.of("success", false, "message", "User name can't be empty.")));
+            return;
+        }
 
-        response.setStatus(HttpServletResponse.SC_OK); // 200 OK
-        if (didAdd) {
-            response.getWriter().write("{\"success\": true, \"message\": \"User created and logged in\"}");
-        } else {
-            response.getWriter().write("{\"success\": true, \"message\": \"Welcome back\"}");
+        try {
+            // the reply carries the name as stored, so the client uses the same spelling as the server
+            String loggedInAs = engine.login(username);
+            response.setStatus(HttpServletResponse.SC_OK);
+            response.getWriter().write(new Gson().toJson(Map.of("success", true, "username", loggedInAs)));
+        } catch (IllegalArgumentException e) {
+            // that name is already logged in
+            response.setStatus(HttpServletResponse.SC_CONFLICT);
+            response.getWriter().write(new Gson().toJson(Map.of("success", false, "message", e.getMessage())));
         }
     }
 }

@@ -92,6 +92,18 @@ public interface EngineInterface {
     public boolean addUser(String username);
 
     /**
+     * logs a user in (names are case-insensitive). a new name creates the user, a name that logged out
+     * before gets its account back. throws IllegalArgumentException if that name is already logged in.
+     * returns the user's name as stored (the spelling they first used).
+     */
+    String login(String username);
+
+    /**
+     * marks the user as logged out, so their name can log in again.
+     */
+    void logout(String username);
+
+    /**
      * adds money to the user's balance. returns the new balance.
      * throws IllegalArgumentException for an unknown user or an amount that isn't positive.
      */

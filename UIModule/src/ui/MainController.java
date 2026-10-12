@@ -162,7 +162,7 @@ public class MainController {
             state.getClientUtil().fetchDeltaUpdates(currentVersion,
                     // התיקון כאן: מורידים את המילה EventsDeltaDTO, וכותבים רק את שם המשתנה
                     deltaDTO -> {
-                        // 1. השרת החזיר מידע! מעדכנים את הגרסה המקומית
+                    // 1. השרת החזיר מידע! מעדכנים את הגרסה המקומית
                         state.setLocalVersion(deltaDTO.serverVersion());
 
 

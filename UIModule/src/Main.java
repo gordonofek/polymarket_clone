@@ -5,12 +5,16 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import ui.LoginController;
 import ui.MainController;
+import ui.network.ClientUtil;
 
 import java.io.IOException;
 
 public class Main extends Application {
 
     private Stage primaryStage;
+
+    // who is logged in from this client (null until the login succeeds)
+    private String loggedInUser;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -48,6 +52,7 @@ public class Main extends Application {
         Parent root = loader.load();
 
         // the logged in user stays the active user for the whole session
+        loggedInUser = username;
         MainController mainController = loader.getController();
         mainController.setLoggedInUser(username);
         primaryStage.setTitle("Guess Market - " + username);
@@ -75,6 +80,19 @@ public class Main extends Application {
         }
     }
 
+
+    // runs when the window is closed: frees the user name on the server so it can log in again
+    @Override
+    public void stop() {
+        if (loggedInUser != null) {
+            try {
+                new ClientUtil().logout(loggedInUser);
+            } catch (Exception e) {
+                // the server may already be down; nothing to free then
+                System.err.println("Logout failed: " + e.getMessage());
+            }
+        }
+    }
 
     public static void main(String[] args) {
         launch(args);

@@ -65,8 +65,14 @@ public class ProfileTabController {
     // the portfolio row whose overview is shown
     private PortfolioItemDTO viewedItem;
 
+    // the overview currently on screen, so a refresh only rebuilds it when something changed
+    private UserEventOverviewDTO shownOverview;
+
     // balance from the last refresh, shown in the deposit/withdraw dialog
     private double currentBalance;
+
+    // whether the user was blocked at the last refresh, so the "blocked" alert shows only once
+    private boolean wasBlocked;
 
     // called by MainController once the whole window is loaded
     public void init(AppState state) {
@@ -104,10 +110,11 @@ public class ProfileTabController {
             UserDetailsDTO details = fetchUserDTOTask.getValue();
             profileUsernameLabel.setText(details.name());
             currentBalance = details.balance();
-            profileBalanceLabel.setText(String.format("$%.2f", details.balance()));
+            profileBalanceLabel.setText(String.format("$%.2f%s", details.balance(), details.blocked() ? " (blocked)" : ""));
             balanceTableView.getItems().setAll(details.balanceHistory());
+            notifyIfJustBlocked(details);
 
-            // keep the selected row (and its overview) across refreshes
+            // keep the selected row across refreshes, and reload its overview (new trades may have happened)
             portfolioTableView.getItems().setAll(details.portfolio());
             if (viewedItem != null) {
                 for (PortfolioItemDTO item : details.portfolio()) {
@@ -117,6 +124,7 @@ public class ProfileTabController {
                         break;
                     }
                 }
+                loadOverview(viewedItem.eventName());
             }
         });
 
@@ -129,9 +137,25 @@ public class ProfileTabController {
         thread.start();
     }
 
+    // the balance can go negative from someone else's action too (a waiting buy order of ours gets filled),
+    // so every refresh checks it, and the user is told once, when it happens
+    private void notifyIfJustBlocked(UserDetailsDTO details) {
+        boolean justBlocked = details.blocked() && !wasBlocked;
+        // updated before the alert: showAndWait keeps the refresh timer running while the alert is open,
+        // and those refreshes must already see that the user was told
+        wasBlocked = details.blocked();
+        if (justBlocked) {
+            UiUtils.showAlert(Alert.AlertType.WARNING, "Account Blocked",
+                    String.format("Your balance went negative ($%.2f).%nYou can't trade until you deposit enough "
+                            + "to bring it back to $0.00 or more.", details.balance()),
+                    state.getThemeStylesheets());
+        }
+    }
+
     // clears the event overview (e.g. after a new file is loaded); the active user stays
     public void reset() {
         viewedItem = null;
+        shownOverview = null;
         portfolioTableView.getSelectionModel().clearSelection();
         portfolioTableView.getItems().clear();
         userEventOptionsBox.getChildren().clear();
@@ -144,10 +168,6 @@ public class ProfileTabController {
     }
 
     private void populateUserEventOverview(EventSummaryDTO event, String username) {
-
-        userEventTitleLabel.setText("Overview for: " + event.name());
-        userEventOptionsBox.getChildren().clear();
-
         boolean isOrderBook = event.tradingMethodType().contains("ORDER_BOOK");
         boolean isClosed = event.status().equals("CLOSED");
 
@@ -163,6 +183,14 @@ public class ProfileTabController {
         fetchUserEventOverviewTask.setOnSucceeded(e ->
         {
             UserEventOverviewDTO overview = fetchUserEventOverviewTask.getValue();
+
+            // keep the screen as it is for a late reply about a row the user already left,
+            // or when nothing changed since the last refresh (rebuilding every 2 seconds would flicker)
+            if (viewedItem == null || !viewedItem.eventName().equals(event.name()) || overview.equals(shownOverview)) {
+                return;
+            }
+            shownOverview = overview;
+            userEventTitleLabel.setText("Overview for: " + event.name());
 
             VBox contentBox = new VBox(10);
 
@@ -199,13 +227,22 @@ public class ProfileTabController {
                 }
 
                 if (isClosed) {
+                    // the closed event's result: how many shares of each option were bought in total, and the winner
+                    Label totalsLabel = new Label("Total Shares Bought per Option:");
+                    totalsLabel.getStyleClass().add("overview-header-label");
+                    contentBox.getChildren().add(totalsLabel);
+                    for (Map.Entry<String, Integer> entry : overview.optionTotalShares().entrySet()) {
+                        contentBox.getChildren().add(new Label(String.format("• %s: %d shares", entry.getKey(), entry.getValue())));
+                    }
+
                     Label winnerLabel = new Label("Winning Option: " + overview.winningOption());
                     winnerLabel.getStyleClass().add("overview-winner-label");
                     contentBox.getChildren().add(winnerLabel);
                 }
             }
 
-            userEventOptionsBox.getChildren().add(contentBox);
+            // replaces the previous overview (a refresh with new trades rebuilds it)
+            userEventOptionsBox.getChildren().setAll(contentBox);
         });
 
         fetchUserEventOverviewTask.setOnFailed(e -> {
@@ -338,34 +375,41 @@ public class ProfileTabController {
 
         portfolioTableView.setRowFactory(tv -> UiUtils.createAnimatedRow(state));
 
-        // only a click on a different row loads a new overview (refresh() re-selects the same one)
+        // a click on a different row shows that event's overview (refresh() re-selects the same row and keeps it updated)
         portfolioTableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection == null || (viewedItem != null && isSameHolding(newSelection, viewedItem))) {
                 return;
             }
             viewedItem = newSelection;
-
-            Task<List<EventSummaryDTO>> fetchEventsTask = new Task<>() {
-                @Override
-                protected List<EventSummaryDTO> call() throws Exception {
-                    return clientUtil.getEventsSummary();
-                }
-            };
-
-            fetchEventsTask.setOnSucceeded(e -> {
-                fetchEventsTask.getValue().stream()
-                        .filter(ev -> ev.name().equals(newSelection.eventName()))
-                        .findFirst()
-                        .ifPresent(ev -> populateUserEventOverview(ev, state.getActiveUser()));
-            });
-
-            fetchEventsTask.setOnFailed(e -> {
-                System.err.println("Failed to fetch events for portfolio click: " + fetchEventsTask.getException().getMessage());
-            });
-
-            Thread thread = new Thread(fetchEventsTask);
-            thread.setDaemon(true);
-            thread.start();
+            shownOverview = null;
+            userEventTitleLabel.setText("Overview for: " + newSelection.eventName());
+            userEventOptionsBox.getChildren().clear();
+            loadOverview(newSelection.eventName());
         });
+    }
+
+    // fetches the event (for its method and status) and then the active user's overview of it
+    private void loadOverview(String eventName) {
+        Task<List<EventSummaryDTO>> fetchEventsTask = new Task<>() {
+            @Override
+            protected List<EventSummaryDTO> call() throws Exception {
+                return clientUtil.getEventsSummary();
+            }
+        };
+
+        fetchEventsTask.setOnSucceeded(e -> {
+            fetchEventsTask.getValue().stream()
+                    .filter(ev -> ev.name().equals(eventName))
+                    .findFirst()
+                    .ifPresent(ev -> populateUserEventOverview(ev, state.getActiveUser()));
+        });
+
+        fetchEventsTask.setOnFailed(e -> {
+            System.err.println("Failed to fetch events for the overview: " + fetchEventsTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(fetchEventsTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 }

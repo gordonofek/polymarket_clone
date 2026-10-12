@@ -37,7 +37,7 @@ public class Engine implements EngineInterface {
 
             // the uploader manages every event in the file (only they can start and close them)
             for (Event event : events) {
-                event.setMarketMaker(uploader);
+                event.setMarketMaker(marketMaker.getName());
                 marketMaker.addManagedEvent(event.getName());
             }
             eventManager.addEventList(events);
@@ -167,7 +167,8 @@ public class Engine implements EngineInterface {
                     .toList();
 
             // 4. Stream to map the raw trade history to TradeRecordDTOs
-            List<TradeRecordDTO> historyDTOs = event.getTradeHistory().stream()
+            // newest first (the price graph reads it backwards to go left-to-right in time)
+            List<TradeRecordDTO> historyDTOs = event.getTradeHistory().reversed().stream()
                     .map(trade -> new TradeRecordDTO(
                             trade.action(),
                             trade.optionName(),
@@ -244,10 +245,17 @@ public class Engine implements EngineInterface {
         try {
             Event event = eventManager.getEvent(eventName);
             User initiatingUser = userManager.getUser(username);
+            if (initiatingUser == null || event == null) {
+                return new TradeReceiptDTO(false, initiatingUser == null ? "Unknown user." : "Unknown event.", 0, 0);
+            }
+            // names are case-insensitive; the order book and the ledger always use the user's own spelling
+            username = initiatingUser.getName();
 
             // check if the user went into negative balance, if yes then he is blocked and thus can't trade.
             if (initiatingUser.isBlocked()) {
-                return new TradeReceiptDTO(false, "User is blocked due to negative balance.", 0, 0);
+                return new TradeReceiptDTO(false, String.format(
+                        "Your account is blocked because your balance is negative ($%.2f). "
+                                + "Deposit funds to bring it back to $0.00 or more.", initiatingUser.getBalance()), 0, 0);
             }
 
             // a seller can only offer shares they own and haven't already offered in another waiting sell order
@@ -395,7 +403,7 @@ public class Engine implements EngineInterface {
             if (method instanceof OrderBookTradingMethod && sharesToGive > 0) {
                 for (String optionName : event.getOptions()) {
                     user.addShares(eventName, optionName, sharesToGive);
-                    event.recordParticipant(username, optionName, sharesToGive);
+                    event.recordParticipant(user.getName(), optionName, sharesToGive);
                 }
             }
             return new TradeReceiptDTO(true, "Event started successfully!", cost, 0);
@@ -539,7 +547,7 @@ public class Engine implements EngineInterface {
                             change.details()
                     )).toList();
 
-            return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio, balanceHistory);
+            return new UserDetailsDTO(user.getName(), user.getBalance(), portfolio, balanceHistory, user.isBlocked());
         } finally {
             lock.readLock().unlock();
         }
@@ -549,6 +557,39 @@ public class Engine implements EngineInterface {
         lock.writeLock().lock();
         try {
             return this.userManager.addIfNotExists(username);
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public String login(String username) {
+        lock.writeLock().lock();
+        try {
+            if (username == null || username.isBlank()) {
+                throw new IllegalArgumentException("User name can't be empty.");
+            }
+            if (userManager.isLoggedIn(username)) {
+                User existing = userManager.getUser(username);
+                throw new IllegalArgumentException("The user name '" + existing.getName()
+                        + "' is already logged in. Please choose a different name.");
+            }
+            // a new name creates the user; a name that logged out before gets its account back
+            userManager.addIfNotExists(username);
+            userManager.setLoggedIn(username, true);
+            return userManager.getUser(username).getName();
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    @Override
+    public void logout(String username) {
+        lock.writeLock().lock();
+        try {
+            if (username != null) {
+                userManager.setLoggedIn(username, false);
+            }
         } finally {
             lock.writeLock().unlock();
         }
@@ -642,8 +683,9 @@ public class Engine implements EngineInterface {
             // find the winner if closed
             String winner = (event.getStatus() == EventStatus.CLOSED) ? event.getWinningOption() : null;
 
-            List<TradeRecordDTO> history = event.getTradeHistory().stream()
-                    .filter(trade -> trade.username().equals(username))
+            // newest first
+            List<TradeRecordDTO> history = event.getTradeHistory().reversed().stream()
+                    .filter(trade -> trade.username().equals(user.getName()))
                     .map(trade -> new TradeRecordDTO(
                             trade.action(),
                             trade.optionName(),
@@ -652,7 +694,13 @@ public class Engine implements EngineInterface {
                     ))
                     .toList();
 
-            return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner);
+            // total shares of each option in the whole event, in the event's option order
+            Map<String, Integer> optionTotals = new LinkedHashMap<>();
+            for (String optionName : event.getOptions()) {
+                optionTotals.put(optionName, event.getOptionShares(optionName));
+            }
+
+            return new UserEventOverviewDTO(commission, investments, profitLoss, history, winner, optionTotals);
         } finally {
             lock.readLock().unlock();
         }

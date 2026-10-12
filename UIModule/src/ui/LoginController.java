@@ -7,13 +7,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import java.util.function.Consumer;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import javafx.application.Platform;
 import ui.network.ClientUtil;
 
 /**
@@ -77,40 +70,19 @@ public class LoginController {
 
 
     /**
-     * Sends the login to the server.
-     *
-     * TODO when we have a server:
-     *  build a login request with the user name.
-     *      success        -> onLoginSuccess.accept(username)
-     *      server refused -> setBlock(false); showError(message from the server)
-     *      no connection  -> setBlock(false); showError("Can't reach the server. Is it running?")
+     * Sends the login to the server in the background.
+     *      success        -> onLoginSuccess.accept(name as the server stores it)
+     *      server refused -> showError(message from the server), e.g. the name is already logged in
+     *      no connection  -> showError("Can't reach the server...")
      */
     private void sendLoginRequest(String username) {
         setBlock(true);
 
-        Task<Boolean> loginTask = new Task<>() {
+        Task<String> loginTask = new Task<>() {
             @Override
-            protected Boolean call() throws Exception
-            {
-                // פעולות רשת כבדות מתבצעות כאן ברקע
-                String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
-                String formData = "username=" + encodedUsername;
-
-                HttpClient client = HttpClient.newHttpClient();
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(ClientUtil.BASE_URL + "/login"))
-                        .header("Content-Type", "application/x-www-form-urlencoded")
-                        .POST(HttpRequest.BodyPublishers.ofString(formData))
-                        .build();
-
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() == 200) {
-                    return true; // מחזיר הצלחה
-                } else {
-                    // זריקת חריגה כאן תעביר אותנו אוטומטית ל-setOnFailed
-                    throw new Exception(response.body());
-                }
+            protected String call() throws Exception {
+                // names are case-insensitive, so the server answers with the spelling it has stored
+                return new ClientUtil().login(username);
             }
         };
 
@@ -119,7 +91,7 @@ public class LoginController {
         {
             setBlock(false);
             if (onLoginSuccess != null) {
-                onLoginSuccess.accept(username);
+                onLoginSuccess.accept(loginTask.getValue());
             }
         });
 
@@ -132,11 +104,13 @@ public class LoginController {
             if (exception instanceof java.net.ConnectException) {
                 showError("Can't reach the server. Is Tomcat running?");
             } else {
-                showError("Login failed: " + exception.getMessage());
+                showError(exception.getMessage());
             }
         });
 
         // הרצת המשימה
-        new Thread(loginTask).start();
+        Thread thread = new Thread(loginTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 }

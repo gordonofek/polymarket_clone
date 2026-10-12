@@ -55,19 +55,39 @@ public class ClientUtil {
         }
     }
 
-    public void login(String username) throws Exception {
-        String encodedUsername = URLEncoder.encode(username, StandardCharsets.UTF_8);
-
+    // logs in and returns the user name as the server stores it (names are case-insensitive)
+    public String login(String username) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(BASE_URL + "/login?userName=" + encodedUsername))
-                .GET() // Or POST, depending on how you wrote your LoginServlet
+                .uri(URI.create(BASE_URL + "/login"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString("username=" + encode(username)))
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() != 200) {
-            throw new Exception("Login failed: " + response.body());
+        JsonObject body;
+        try {
+            body = JsonParser.parseString(response.body()).getAsJsonObject();
+        } catch (RuntimeException notOurJson) {
+            // e.g. a Tomcat error page instead of our JSON
+            throw new Exception("Server error: " + response.statusCode());
         }
+        if (response.statusCode() != 200) {
+            throw new Exception(body.get("message").getAsString());
+        }
+        return body.get("username").getAsString();
+    }
+
+    // frees the user name on the server; called when the client closes
+    public void logout(String username) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(BASE_URL + "/logout"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .timeout(java.time.Duration.ofSeconds(2))
+                .POST(HttpRequest.BodyPublishers.ofString("username=" + encode(username)))
+                .build();
+
+        client.send(request, HttpResponse.BodyHandlers.discarding());
     }
 
     public void fetchDeltaUpdates(int currentVersion, Consumer<EventsDeltaDTO> onSuccess, Consumer<String> onError) {

@@ -15,6 +15,7 @@ import javafx.scene.text.TextAlignment;
 import javafx.animation.ScaleTransition;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -298,7 +299,7 @@ public class EventsTabController {
 
             populateOptionsList(data.history(), eventSummary, isOrderBook);
             populateHistoryList(data.history(), isOrderBook);
-            populateParticipantsList(data.participants());
+            populateParticipantsList(data.participants(), data.history());
             updateMarketMakerControls(data.isMarketMaker(), eventSummary.status());
             updatePriceGraph(data.history());
         });
@@ -442,18 +443,26 @@ public class EventsTabController {
         }
     }
 
-    private void populateParticipantsList(List<ParticipantHoldingDTO> participantsDetails) {
+    private void populateParticipantsList(List<ParticipantHoldingDTO> participantsDetails, EventDetailsDTO eventDetails) {
         if(participantsDetails.isEmpty()) {
             Label emptyParticipantsLbl = new Label("No Users have taken part in this event. :C");
             eventparticipationsListView.getItems().add(emptyParticipantsLbl);
         } else {
+            // a holding is worth its shares times the option's current price (LMSR price, or LAST in an order book)
+            Map<String, Double> currentPrices = new HashMap<>();
+            for (OptionDetailsDTO option : eventDetails.options()) {
+                currentPrices.put(option.optionName(), option.currentPrice());
+            }
+
             for (ParticipantHoldingDTO participant : participantsDetails) {
                 String username = participant.username();
                 for (Map.Entry<String, Integer> holding : participant.shares().entrySet()) {
                     String optionName = holding.getKey();
                     int shareCount = holding.getValue();
                     if (shareCount > 0 ) {
-                        String text = String.format("User: %s | Option '%s' | Shares: %d", username, optionName, shareCount);
+                        double value = shareCount * currentPrices.getOrDefault(optionName, 0.0);
+                        String text = String.format("User: %s | Option '%s' | Shares: %d | Value: $%.2f",
+                                username, optionName, shareCount, value);
                         Label holdingLabel = new Label(text);
                         holdingLabel.getStyleClass().add("holding-label");
                         eventparticipationsListView.getItems().add(holdingLabel);
