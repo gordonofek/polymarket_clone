@@ -181,7 +181,14 @@ public class EventsTabController {
         Label commVal = new Label(eventSummary.commission() + "% (" + commTypeStr + ")");
         commVal.getStyleClass().add("comm-val-label");
 
-        HBox commBox = new HBox(6, commTitle, commVal);
+        // the event's own account (the money it holds)
+        Label accountTitle = new Label("Account:");
+        accountTitle.getStyleClass().add("comm-title-label");
+        Label accountVal = new Label(String.format("$%.2f", eventSummary.accountBalance()));
+        accountVal.getStyleClass().add("comm-val-label");
+        HBox.setMargin(accountTitle, new Insets(0, 0, 0, 14));
+
+        HBox commBox = new HBox(6, commTitle, commVal, accountTitle, accountVal);
         commBox.setAlignment(Pos.BOTTOM_LEFT);
         commBox.setPadding(new Insets(10, 0, 0, 0));
 

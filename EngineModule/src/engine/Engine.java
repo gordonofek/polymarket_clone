@@ -63,16 +63,7 @@ public class Engine implements EngineInterface {
             // using stream to turn all the Events into EventSummaryDTO,
             // and then putting it in a list and returning it
             return eventManager.getAllEvents().stream()
-                    .map(event -> new EventSummaryDTO(
-                            event.getName(),
-                            event.getDescription(),
-                            event.getStatus().name(), // Converts the EventStatus enum to a String
-                            event.getCommissionPercent(),
-                            event.getCommissionType().name(),
-                            event.getOptions(),
-                            event.getEventTradingMethodType().name(),
-                            event.getMarketMaker()
-                    ))
+                    .map(Engine::toSummary)
                     .toList();
         } finally {
             lock.readLock().unlock();
@@ -90,17 +81,7 @@ public class Engine implements EngineInterface {
             for (Event event : eventManager.getAllEvents()) {
                 // Only process the event if its status is OPEN
                 if (event.getStatus() == EventStatus.OPEN) {
-                    EventSummaryDTO dto = new EventSummaryDTO(
-                            event.getName(),
-                            event.getDescription(),
-                            event.getStatus().name(), // Converts the EventStatus enum to a String
-                            event.getCommissionPercent(),
-                            event.getCommissionType().name(),
-                            event.getOptions(),
-                            event.getEventTradingMethodType().name(),
-                            event.getMarketMaker()
-                    );
-                    list.add(dto);
+                    list.add(toSummary(event));
                 }
             }
 
@@ -184,7 +165,7 @@ public class Engine implements EngineInterface {
             return new EventDetailsDTO(
                     event.getName(),
                     event.getStatus().name(),
-                    event.getPoolValue(),
+                    accountBalance(event),
                     totalCommission,
                     optionsDTOs,
                     historyDTOs,
@@ -200,16 +181,8 @@ public class Engine implements EngineInterface {
         try {
             // שולפים רק אירועים שהשתנו, וממירים אותם ל-DTO
             List<EventSummaryDTO> updatedEvents = eventManager.getEventsSinceVersion(clientVersion).stream()
-                    .map(event -> new EventSummaryDTO(
-                            event.getName(),
-                            event.getDescription(),
-                            event.getStatus().name(),
-                            event.getCommissionPercent(),
-                            event.getCommissionType().name(),
-                            event.getOptions(),
-                            event.getEventTradingMethodType().name(),
-                            event.getMarketMaker()
-                    )).toList();
+                    .map(Engine::toSummary)
+                    .toList();
 
             // אורזים יחד עם השעון העדכני
             return new EventsDeltaDTO(eventManager.getGlobalVersion(), updatedEvents);
@@ -626,6 +599,27 @@ public class Engine implements EngineInterface {
         } finally {
             lock.writeLock().unlock();
         }
+    }
+
+    // the event list's view of an event (used by the full list, the active list and delta fetching)
+    private static EventSummaryDTO toSummary(Event event) {
+        return new EventSummaryDTO(
+                event.getName(),
+                event.getDescription(),
+                event.getStatus().name(), // Converts the EventStatus enum to a String
+                event.getCommissionPercent(),
+                event.getCommissionType().name(),
+                event.getOptions(),
+                event.getEventTradingMethodType().name(),
+                event.getMarketMaker(),
+                accountBalance(event)
+        );
+    }
+
+    // money in the event's own account. Before the start nothing was paid in yet (LMSR would still compute
+    // its subsidy formula), and closing pays everything out (the pool value itself isn't cleared), so both are 0
+    private static double accountBalance(Event event) {
+        return event.getStatus() == EventStatus.OPEN ? event.getPoolValue() : 0.0;
     }
 
     // only the user who uploaded an event (its market maker) may start or close it; returns the reason if not, else null
