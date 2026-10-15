@@ -94,6 +94,9 @@ input:focus, select:focus, button:focus-visible { outline: 2px solid #8fb3f5; ou
 .app-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .app-header .main-app-title { flex: 1; text-align: center; }
 .header-user { display: flex; align-items: center; gap: 8px; }
+.file-bar { display: flex; align-items: center; gap: 10px; }
+.file-bar input[type=text] { flex: 1; min-width: 0; pointer-events: none; color: var(--muted); }
+.file-bar progress { width: 150px; }
 .tab-bar { display: flex; gap: 2px; border-bottom: 1px solid var(--border); }
 .tab {
     background: transparent; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0;

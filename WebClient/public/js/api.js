@@ -57,6 +57,23 @@ export function logout(username) {
     return post('/logout', { username });
 }
 
+// ---------- file upload ----------
+// sends the XML file as the raw request body, like the JavaFX client;
+// the uploader becomes the market maker of every event in the file
+export async function uploadFile(file, userName) {
+    let response;
+    try {
+        response = await fetch(`${BASE}/FileUpload?${new URLSearchParams({ userName })}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/xml' },
+            body: file,
+        });
+    } catch {
+        throw new ServerError("Can't reach the web client's server. Is run.bat still running?");
+    }
+    return readJson(response);
+}
+
 // ---------- events ----------
 export const getEvents = () => get('/events');                                      // EventSummaryDTO[]
 export const getEventsDelta = (version) => get('/events', { version });             // { serverVersion, updatedEvents }

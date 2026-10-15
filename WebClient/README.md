@@ -28,8 +28,9 @@ as its own user. JavaFX clients can be used at the same time.
 | **Profile** | Balance, *Add Funds* / *Withdraw*, the full balance history (every change: trades, commissions, payouts, deposits…), the portfolio, and an overview of a picked event. A notice appears when the balance goes negative (the account is then blocked until a deposit). |
 | **Users** | Every user with their balance and whether they are a market maker; picking a user shows the events they are market maker of. |
 
-As the exercise defines, the web client **cannot upload files** (events are uploaded from the JavaFX client).
-The JavaFX client's *Settings* tab (themes/animations) is not part of the web client.
+**Load File** (the bar under the header, like the JavaFX client's top bar) uploads an XML file of events to the
+server; the logged in user becomes the market maker of every event in the file. Errors in the file are shown
+in a dialog. The JavaFX client's *Settings* tab (themes/animations) is not part of the web client.
 
 **Automatic updates (pull):** the events are refreshed every second with delta fetching (only events that
 changed since the last pull), and the user's details every 2 seconds – the same endpoints the JavaFX client uses.

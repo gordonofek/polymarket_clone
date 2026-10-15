@@ -34,6 +34,14 @@
         </div>
     </header>
 
+    <!-- like the JavaFX client's top bar: upload an XML file of events -->
+    <div class="file-bar">
+        <button id="loadFileBtn" type="button" class="buy-option-btn">Load File</button>
+        <input id="fileInput" type="file" accept=".xml,application/xml,text/xml" hidden>
+        <input id="filePathField" type="text" readonly tabindex="-1" placeholder="Currently Loaded File path">
+        <progress id="uploadProgress" hidden></progress>
+    </div>
+
     <nav class="tab-bar" role="tablist">
         <button type="button" role="tab" class="tab active" data-tab="events">Events</button>
         <button type="button" role="tab" class="tab" data-tab="profile">Profile</button>

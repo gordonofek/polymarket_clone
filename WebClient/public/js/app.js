@@ -1,7 +1,7 @@
 // Entry point: the login screen, the tabs and the automatic refresh (pull) of the data.
 
 import * as api from './api.js';
-import { $ } from './ui.js';
+import { $, showAlert } from './ui.js';
 import { EventsView } from './events.js';
 import { ProfileView } from './profile.js';
 import { UsersView } from './users.js';
@@ -28,6 +28,8 @@ class App {
         });
         $('usernameField').addEventListener('input', () => { $('loginError').hidden = true; });
         $('logoutBtn').addEventListener('click', () => this.logOut());
+        $('loadFileBtn').addEventListener('click', () => $('fileInput').click());
+        $('fileInput').addEventListener('change', () => this.handleUploadFile());
         for (const tab of document.querySelectorAll('.tab')) {
             tab.addEventListener('click', () => this.showTab(tab.dataset.tab));
         }
@@ -122,6 +124,31 @@ class App {
             await api.logout(name);
         } catch { /* the server is gone; nothing to free */ }
         location.reload();
+    }
+
+    // ---------- file upload ----------
+
+    // the logged in user becomes the market maker of the uploaded events
+    async handleUploadFile() {
+        const file = $('fileInput').files[0];
+        $('fileInput').value = ''; // so picking the same file again fires 'change'
+        if (!file) return;
+
+        $('loadFileBtn').disabled = true;
+        $('filePathField').value = 'Uploading to server...';
+        $('uploadProgress').hidden = false;
+        try {
+            await api.uploadFile(file, this.username);
+            $('filePathField').value = `Loaded: ${file.name}`;
+            showAlert('success', 'Success', 'File uploaded and loaded successfully!');
+            this.refreshSoon();
+        } catch (err) {
+            $('filePathField').value = 'Upload failed';
+            showAlert('error', 'Upload Failed', err.message);
+        } finally {
+            $('uploadProgress').hidden = true;
+            $('loadFileBtn').disabled = false;
+        }
     }
 
     // ---------- tabs ----------
